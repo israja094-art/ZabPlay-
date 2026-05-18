@@ -15,6 +15,7 @@ function VideoPage() {
   const { videos: list } = useMediaStore();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [playerControlsVisible, setPlayerControlsVisible] = useState(true); // Tracks player overlay visibility state
   const menuRef = useRef<HTMLDivElement>(null);
   const current = list.find((v) => v.id === id) ?? list[0];
 
@@ -35,12 +36,17 @@ function VideoPage() {
     const len = list.length;
     if (!len) return;
     const next = list[((i % len) + len) % len];
-    navigate({ to: "/video/$id", params: { id: next.id } });
+    // Block list scroll resetting on next/prev click trigger
+    void navigate({ 
+      to: "/video/$id", 
+      params: { id: next.id },
+      resetScroll: false 
+    });
   };
 
   return (
     <div className="min-h-screen bg-background mx-auto max-w-md pb-20">
-      {/* Sticky locked player - Added touch-none and stopPropagation to lock gestures */}
+      {/* Sticky locked player */}
       <div 
         className="sticky top-0 z-20 bg-black touch-none"
         onTouchMove={(e) => e.stopPropagation()}
@@ -50,10 +56,16 @@ function VideoPage() {
             src={current.src}
             onPrev={() => goTo(idx - 1)}
             onNext={() => goTo(idx + 1)}
+            onControlsVisibilityChange={(visible) => setPlayerControlsVisible(visible)} // Sync dynamic hide visibility state
           />
+          
+          {/* Back Arrow Toggle Option — Ab yeh player controls ke sath hi smooth hide/show hoga */}
           <Link
             to="/"
-            className="absolute top-3 left-3 z-30 text-primary p-2 rounded-full bg-black/40"
+            resetScroll={false}
+            className={`absolute top-3 left-3 z-30 text-primary p-2 rounded-full bg-black/40 transition-opacity duration-200 ${
+              playerControlsVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+            }`}
             aria-label="Back"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -65,7 +77,7 @@ function VideoPage() {
         </div>
       </div>
 
-      {/* Premium & Bigger Video List */}
+      {/* Premium & Bigger Video List Grid Layer */}
       <ul className="px-3 pt-3 space-y-2">
         {list.map((v) => {
           const active = v.id === current.id;
@@ -77,7 +89,14 @@ function VideoPage() {
                 }`}
               >
                 <button
-                  onClick={() => navigate({ to: "/video/$id", params: { id: v.id } })}
+                  onClick={() => {
+                    // 🔥 STRICT FIX: resetScroll false lagaya taaki click karne par list jump na kare!
+                    void navigate({ 
+                      to: "/video/$id", 
+                      params: { id: v.id }, 
+                      resetScroll: false 
+                    });
+                  }}
                   className="flex flex-1 gap-3 items-center min-w-0 text-left"
                 >
                   {/* Bigger Thumbnail Framework */}
@@ -129,7 +148,7 @@ function VideoPage() {
                   <button
                     onClick={() => {
                       setOpenMenu(null);
-                      navigate({ to: "/video/$id", params: { id: v.id } });
+                      void navigate({ to: "/video/$id", params: { id: v.id }, resetScroll: false });
                     }}
                     className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent/20"
                   >
@@ -150,8 +169,11 @@ function VideoPage() {
                       setOpenMenu(null);
                       if (v.id === current.id) {
                         const remaining = list.filter((x) => x.id !== v.id);
-                        if (remaining.length) navigate({ to: "/video/$id", params: { id: remaining[0].id } });
-                        else navigate({ to: "/" });
+                        if (remaining.length) {
+                          void navigate({ to: "/video/$id", params: { id: remaining[0].id }, resetScroll: false });
+                        } else {
+                          void navigate({ to: "/" });
+                        }
                       }
                     }}
                     className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-accent/20"
@@ -169,4 +191,3 @@ function VideoPage() {
     </div>
   );
 }
-
