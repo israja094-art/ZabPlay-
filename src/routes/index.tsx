@@ -31,17 +31,23 @@ function Index() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // 🔥 App Open hote hi permission pop-up aur scanning trigger karne ke liye hook
+  // 🌟 Safe Timeout Execution Loop Core Framework
   useEffect(() => {
     const triggerFirstScan = async () => {
       try {
-        console.log("App opened: Triggering primary storage permission and scan...");
+        console.log("App mounted: Dispatching non-blocking storage bridge authorization...");
         await runNativeScan(true);
       } catch (err) {
-        console.warn("Initial active scanner launch failed", err);
+        console.warn("Deferred permission bridge route bypass executed", err);
       }
     };
-    void triggerFirstScan();
+    
+    // 150ms ka safe gap taaki UI frame lock na ho aur pop-up seedhe handle ho sake
+    const timer = setTimeout(() => {
+      void triggerFirstScan();
+    }, 150);
+
+    return () => clearTimeout(timer);
   }, []);
 
   const list = videos.filter((v) => v.title.toLowerCase().includes(q.toLowerCase()));
@@ -232,3 +238,4 @@ function VideoRow({
 }
 
 void Link;
+
