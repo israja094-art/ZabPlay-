@@ -84,33 +84,36 @@ const scanDir = async (
   for (const entry of entries) {
     const childPath = base ? `${base}/${entry.name}` : entry.name;
     if (entry.type === "directory") {
-      // skip hidden / system dirs
       if (entry.name.startsWith(".") || entry.name === "Android") {
         if (entry.name !== "Android") continue;
       }
       await scanDir(Filesystem, Directory, Capacitor, childPath, depth - 1, out);
     } else {
-      const uri =
-        entry.uri ||
-        (await Filesystem.getUri({ path: childPath, directory: Directory.ExternalStorage })).uri;
-      const playable = Capacitor.convertFileSrc(uri);
-      if (VIDEO_EXT.test(entry.name)) {
-        out.videos.push({
-          id: `nv-${uri}`,
-          title: titleFromPath(entry.name),
-          duration: "",
-          thumb: VIDEO_THUMB_PLACEHOLDER,
-          src: playable,
-        });
-      } else if (AUDIO_EXT.test(entry.name)) {
-        out.songs.push({
-          id: `ns-${uri}`,
-          title: titleFromPath(entry.name),
-          artist: "Device audio",
-          duration: "",
-          cover: SONG_COVER_PLACEHOLDER,
-          src: playable,
-        });
+      try {
+        const uri =
+          entry.uri ||
+          (await Filesystem.getUri({ path: childPath, directory: Directory.ExternalStorage })).uri;
+        const playable = Capacitor.convertFileSrc(uri);
+        if (VIDEO_EXT.test(entry.name)) {
+          out.videos.push({
+            id: `nv-${uri}`,
+            title: titleFromPath(entry.name),
+            duration: "",
+            thumb: VIDEO_THUMB_PLACEHOLDER,
+            src: playable,
+          });
+        } else if (AUDIO_EXT.test(entry.name)) {
+          out.songs.push({
+            id: `ns-${uri}`,
+            title: titleFromPath(entry.name),
+            artist: "Device audio",
+            duration: "",
+            cover: SONG_COVER_PLACEHOLDER,
+            src: playable,
+          });
+        }
+      } catch (fileErr) {
+        console.warn("Skipping file due to read error:", fileErr);
       }
     }
   }
@@ -131,13 +134,22 @@ export const runNativeScan = async (force = false): Promise<void> => {
     const Directory = fsMod.Directory;
     const Capacitor = coreMod.Capacitor;
 
+    // 🔥 Naya Advance Permission Request System (Jo App open hote hi forced pop-up laaye)
     try {
-      const perm = await Filesystem.checkPermissions();
-      if (perm.publicStorage !== "granted") {
-        await Filesystem.requestPermissions();
+      let permStatus = await Filesystem.checkPermissions();
+      
+      // Android 13+ ke liye pure storage checks fail hote hain, isliye direct custom array request use karenge
+      if (permStatus.publicStorage !== "granted") {
+        console.log("Storage permission missing, triggering native dialog prompt...");
+        permStatus = await Filesystem.requestPermissions();
       }
-    } catch {
-      /* ignore — some platforms don't require */
+
+      // Agar standard API block ho raha ho, toh device window context ko use karke native bridge call pass karenge
+      if (permStatus.publicStorage !== "granted" && (Capacitor as any).Permissions) {
+        await (Capacitor as any).Permissions.requestPermissions({ name: 'storage' });
+      }
+    } catch (permErr) {
+      console.warn("Advanced permission auto-request system bypass", permErr);
     }
 
     const out: ScanResult = { videos: [], songs: [] };
@@ -176,6 +188,6 @@ export const wireAutoRescan = async () => {
   } catch {
     /* plugin missing */
   }
-  // periodic safety net in case fs events are missed
-  setInterval(() => void runNativeScan(false), 20_000);
+  // Har 5 second me auto re-check chalega, agar manual allow kiya ho toh turant fetch karne ke liye
+  setInterval(() => void runNativeScan(false), 5000);
 };
