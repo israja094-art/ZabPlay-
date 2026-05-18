@@ -26,11 +26,13 @@ export function VideoPlayer({
   onEnded,
   onPrev,
   onNext,
+  onGestureStateChange, // Dynamic callback to freeze parent element scroll frames
 }: {
   src: string;
   onEnded?: () => void;
   onPrev?: () => void;
   onNext?: () => void;
+  onGestureStateChange?: (swiping: boolean) => void;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -52,6 +54,7 @@ export function VideoPlayer({
   const [expanded, setExpanded] = useState(false);
   const [looping, setLooping] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [isSwipingActive, setIsSwipingActive] = useState(false); // Strict overlay bypass state hook
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTapRef = useRef<{ t: number; x: number } | null>(null);
   const lastActionRef = useRef<{ key: string; at: number } | null>(null);
@@ -131,6 +134,7 @@ export function VideoPlayer({
     setShowEq(false);
     setShowSpeed(false);
     setZoom(1);
+    setIsSwipingActive(false);
     const v = videoRef.current;
     if (!v) return;
     v.currentTime = 0;
@@ -352,7 +356,6 @@ export function VideoPlayer({
         setZoom(next);
         setOverlay(`Zoom ${Math.round(next * 100)}%`);
       }
-      setShowControls(true);
       return;
     }
 
@@ -361,21 +364,27 @@ export function VideoPlayer({
     const t = e.touches[0];
     const dx = t.clientX - g.x;
     const dy = t.clientY - g.y;
+    
     if (g.mode === "") {
       if (Math.abs(dx) < 12 && Math.abs(dy) < 12) return;
       g.mode = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+      
+      // 🌟 Swipe lock trigger to intercept main list scroll frames instantly
+      setIsSwipingActive(true);
+      onGestureStateChange?.(true);
     }
+    
     const v = videoRef.current;
     if (!v) return;
+    
     if (g.mode === "h") {
-      // 1 minute over full width
       const seekDelta = (dx / g.width) * 60;
       const next = Math.max(0, Math.min(v.duration || 0, g.startTime + seekDelta));
       setOverlay(`${seekDelta >= 0 ? "+" : ""}${Math.round(seekDelta)}s  ${formatTime(next)}`);
       setCurrent(next);
-      setShowControls(true);
       return;
     }
+    
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const ratio = -dy / rect.height;
     if (g.side === "R") {
@@ -388,10 +397,13 @@ export function VideoPlayer({
       setBrightness(nb);
       setOverlay(`Brightness ${Math.round(nb)}%`);
     }
-    setShowControls(true);
   };
 
   const onTouchEnd = (e: React.TouchEvent) => {
+    // Release dynamic list lock parameters instantly
+    setIsSwipingActive(false);
+    onGestureStateChange?.(false);
+
     if (pinchRef.current) {
       pinchRef.current = null;
       setTimeout(() => setOverlay(null), 600);
@@ -415,11 +427,22 @@ export function VideoPlayer({
       armHide();
       return;
     }
-    // Treat as tap → check double-tap
+
+    // Treat as tap → check double-tap but only if controls were already visible!
     if (g && g.mode === "") {
       const now = Date.now();
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       const x = (e.changedTouches[0]?.clientX ?? g.x) - rect.left;
+
+      // 🔥 EXPLICIT GUARD: Agar controls hidden they toh double-tap seek lock intercept hoga!
+      if (!showControls) {
+        setShowControls(true);
+        armHide();
+        lastTapRef.current = null;
+        gesture.current = null;
+        return;
+      }
+
       if (lastTapRef.current && now - lastTapRef.current.t < 300) {
         const sameSide =
           (lastTapRef.current.x < rect.width / 2 && x < rect.width / 2) ||
@@ -442,13 +465,21 @@ export function VideoPlayer({
   const pct = duration ? (current / duration) * 100 : 0;
   const stopBubble = (e: React.SyntheticEvent) => e.stopPropagation();
 
+  // Smart dynamic utility variable checking rendering visibility criteria
+  const areControlsVisible = showControls && !isSwipingActive;
+
   return (
     <div
       ref={wrapRef}
       className={`bg-black overflow-hidden select-none ${
         expanded ? "fixed inset-0 z-50 h-dvh w-screen" : "relative w-full aspect-video"
       }`}
-      onClick={reveal}
+      onClick={() => {
+        if (!showControls) {
+          setShowControls(true);
+          armHide();
+        }
+      }}
       onTouchStart={onTouchStart}
       onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
@@ -473,13 +504,13 @@ export function VideoPlayer({
         }}
       />
 
-      {/* Top bar icons */}
+      {/* Top bar icons — Hidden instantly on swipe */}
       <div
         onTouchStart={stopBubble}
         onTouchEnd={stopBubble}
         onTouchMove={stopBubble}
-        className={`absolute top-0 left-0 right-0 z-30 flex items-center justify-end gap-1 p-2 bg-gradient-to-b from-black/70 to-transparent transition-opacity ${
-          showControls ? "opacity-100" : "opacity-0 pointer-events-none"
+        className={`absolute top-0 left-0 right-0 z-30 flex items-center justify-end gap-1 p-2 bg-gradient-to-b from-black/70 to-transparent transition-opacity duration-200 ${
+          areControlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       >
         <button
@@ -556,7 +587,7 @@ export function VideoPlayer({
         </button>
       </div>
 
-      {showSpeed && (
+      {showSpeed && areControlsVisible && (
         <div
           className="absolute top-14 right-3 z-40 bg-black/90 rounded-lg p-2 flex flex-col gap-1"
           onClick={stopBubble}
@@ -578,7 +609,7 @@ export function VideoPlayer({
         </div>
       )}
 
-      {showEq && (
+      {showEq && areControlsVisible && (
         <div
           className="absolute top-14 right-3 z-40 bg-black/90 rounded-lg p-3 w-48 space-y-2"
           onClick={stopBubble}
@@ -605,10 +636,10 @@ export function VideoPlayer({
         </div>
       )}
 
-      {/* Center prev / play / next */}
+      {/* Center prev / play / next — Hidden instantly on swipe */}
       <div
-        className={`pointer-events-none absolute inset-0 z-10 flex items-center justify-center gap-8 transition-opacity ${
-          showControls ? "opacity-100" : "opacity-0"
+        className={`pointer-events-none absolute inset-0 z-10 flex items-center justify-center gap-8 transition-opacity duration-200 ${
+          areControlsVisible ? "opacity-100" : "opacity-0"
         }`}
       >
         <button
@@ -641,14 +672,15 @@ export function VideoPlayer({
       </div>
 
       {overlay && (
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="bg-black/70 text-white text-sm px-4 py-2 rounded-lg">{overlay}</div>
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
+          <div className="bg-black/80 text-white font-medium text-sm px-4 py-2 rounded-lg border border-white/10 shadow-xl">{overlay}</div>
         </div>
       )}
 
+      {/* Bottom Duration Controller Layout Sheet — Hidden instantly on swipe */}
       <div
-        className={`absolute bottom-0 left-0 right-0 z-20 px-3 pb-2 pt-6 bg-gradient-to-t from-black/80 to-transparent transition-opacity ${
-          showControls ? "opacity-100" : "opacity-0 pointer-events-none"
+        className={`absolute bottom-0 left-0 right-0 z-20 px-3 pb-2 pt-6 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-200 ${
+          areControlsVisible ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         onClick={stopBubble}
         onTouchStart={stopBubble}
@@ -675,4 +707,4 @@ export function VideoPlayer({
       </div>
     </div>
   );
-      }
+}
