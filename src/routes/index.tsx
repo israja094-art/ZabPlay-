@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { CheckCircle2, Circle, FolderPlus, Share2, Trash2, X } from "lucide-react";
 import { BottomTabs } from "@/components/BottomTabs";
 import { SearchBar } from "@/components/SearchBar";
 import { Logo } from "@/components/Logo";
 import { useLongPress } from "@/hooks/use-long-press";
+import { runNativeScan } from "@/lib/native-scanner";
 import {
   useMediaStore,
   importVideoFiles,
@@ -29,6 +30,19 @@ function Index() {
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // 🔥 App Open hote hi permission pop-up aur scanning trigger karne ke liye hook
+  useEffect(() => {
+    const triggerFirstScan = async () => {
+      try {
+        console.log("App opened: Triggering primary storage permission and scan...");
+        await runNativeScan(true);
+      } catch (err) {
+        console.warn("Initial active scanner launch failed", err);
+      }
+    };
+    void triggerFirstScan();
+  }, []);
 
   const list = videos.filter((v) => v.title.toLowerCase().includes(q.toLowerCase()));
 
@@ -217,5 +231,4 @@ function VideoRow({
   );
 }
 
-// keep Link import used by tooling
 void Link;
