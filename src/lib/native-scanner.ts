@@ -134,22 +134,25 @@ export const runNativeScan = async (force = false): Promise<void> => {
     const Directory = fsMod.Directory;
     const Capacitor = coreMod.Capacitor;
 
-    // 🔥 Naya Advance Permission Request System (Jo App open hote hi forced pop-up laaye)
+    // 🌟 Universal Android 9 to 15+ Permission Pop-up Bridge 
     try {
       let permStatus = await Filesystem.checkPermissions();
       
-      // Android 13+ ke liye pure storage checks fail hote hain, isliye direct custom array request use karenge
       if (permStatus.publicStorage !== "granted") {
-        console.log("Storage permission missing, triggering native dialog prompt...");
+        console.log("Forcing native storage permission prompt dialog...");
+        // Pehla attempt standard method se
         permStatus = await Filesystem.requestPermissions();
       }
 
-      // Agar standard API block ho raha ho, toh device window context ko use karke native bridge call pass karenge
-      if (permStatus.publicStorage !== "granted" && (Capacitor as any).Permissions) {
-        await (Capacitor as any).Permissions.requestPermissions({ name: 'storage' });
+      // Android 13/14/15+ ke liye direct device window object se forced interaction bridge push karenge
+      if (permStatus.publicStorage !== "granted" && typeof (window as any).Capacitor !== 'undefined') {
+        const nativeBridge = (window as any).Capacitor.Plugins?.Permissions;
+        if (nativeBridge && typeof nativeBridge.requestPermissions === 'function') {
+          await nativeBridge.requestPermissions({ name: 'storage' });
+        }
       }
     } catch (permErr) {
-      console.warn("Advanced permission auto-request system bypass", permErr);
+      console.warn("Permission request routing bypass executed", permErr);
     }
 
     const out: ScanResult = { videos: [], songs: [] };
@@ -188,6 +191,7 @@ export const wireAutoRescan = async () => {
   } catch {
     /* plugin missing */
   }
-  // Har 5 second me auto re-check chalega, agar manual allow kiya ho toh turant fetch karne ke liye
-  setInterval(() => void runNativeScan(false), 5000);
+  // Periodic background check interval ko badha diya taaki launch time par heavy load na pare
+  setInterval(() => void runNativeScan(false), 15000);
 };
+
