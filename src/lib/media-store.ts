@@ -74,7 +74,7 @@ let mediaHydrated = false;
 const userVideos: Video[] = [];
 const userSongs: Song[] = [];
 
-// 🔥 Cache map jisse native duration bar bar extract na karna pade performance glitch ke bina
+// Cache map jisse native duration bar bar extract na karna pade performance glitch ke bina
 const nativeDurationCache = new Map<string, { duration: string; thumb?: string }>();
 
 const computeState = (): State => {
@@ -102,38 +102,55 @@ const emit = () => {
   listeners.forEach((l) => l());
 };
 
-// 🔥 BACKGROUND NATIVE MEDIA PROBER (Background me 00:00 duration hatane ka dimaag)
+// Helper delay utility for time-slicing thread chunks
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+let isProbingBackground = false;
+
+// 🔥 SMART BACKGROUND TRAFFIC CONTROLLER PROBER
 const probeNativeMediaBackground = async () => {
+  if (isProbingBackground) return;
+  isProbingBackground = true;
+
   const nv = getNativeVideos();
   const ns = getNativeSongs();
 
+  // 1. Process Videos with Smooth Time-Slicing Breaks
   for (const video of nv) {
     if (!nativeDurationCache.has(video.id) || nativeDurationCache.get(video.id)?.duration === "") {
       try {
+        // Har video processing ke pehle thread ko 300ms ka aaram denge taaki main player na atke
+        await sleep(300);
+        
         const meta = await probeVideo(video.src);
         if (meta.duration && meta.duration !== "00:00") {
           nativeDurationCache.set(video.id, meta);
           queueMicrotask(() => emit());
         }
       } catch (e) {
-        console.warn("Background video probe dynamic skip", e);
+        console.warn("Background video probe skip to avoid lag", e);
       }
     }
   }
 
+  // 2. Process Songs with Smooth Breaks
   for (const song of ns) {
     if (!nativeDurationCache.has(song.id) || nativeDurationCache.get(song.id)?.duration === "") {
       try {
+        await sleep(150); // Audio meta reads are lighter, 150ms slice is fine
+        
         const d = await probeAudioDuration(song.src);
         if (d && d !== "00:00") {
           nativeDurationCache.set(song.id, { duration: d });
           queueMicrotask(() => emit());
         }
       } catch (e) {
-        console.warn("Background audio probe dynamic skip", e);
+        console.warn("Background audio probe skip to avoid lag", e);
       }
     }
   }
+
+  isProbingBackground = false;
 };
 
 const openDb = (): Promise<IDBDatabase | null> =>
@@ -235,7 +252,12 @@ const subscribe = (l: () => void) => {
     // Native media update monitor hook
     subscribeNativeMedia(() => {
       emit();
-      void probeNativeMediaBackground();
+      // Browser requestIdleCallback fallback system checks wrapper
+      if ('requestIdleCallback' in window) {
+        window.requestIdleCallback(() => void probeNativeMediaBackground(), { timeout: 3000 });
+      } else {
+        setTimeout(() => void probeNativeMediaBackground(), 1000);
+      }
     });
     
     void runNativeScan(true);
@@ -293,6 +315,9 @@ const probeVideo = (url: string): Promise<{ duration: string; thumb: string }> =
     const done = (duration: string, thumb: string) => {
       if (resolved) return;
       resolved = true;
+      // Clean resource instances to free processing thread RAM instantly
+      v.src = "";
+      v.load();
       resolve({ duration, thumb });
     };
     v.addEventListener("loadeddata", () => {
@@ -309,13 +334,13 @@ const probeVideo = (url: string): Promise<{ duration: string; thumb: string }> =
         c.height = Math.round((v.videoHeight / v.videoWidth) * 320) || 180;
         const ctx = c.getContext("2d");
         ctx?.drawImage(v, 0, 0, c.width, c.height);
-        done(fmtDuration(v.duration), c.toDataURL("image/jpeg", 0.7));
+        done(fmtDuration(v.duration), c.toDataURL("image/jpeg", 0.6)); // Lower compression factor to 0.6 to minimize canvas execution frame delay
       } catch {
         done(fmtDuration(v.duration), "");
       }
     });
     v.addEventListener("error", () => done("00:00", ""));
-    setTimeout(() => done(fmtDuration(v.duration || 0), ""), 4000);
+    setTimeout(() => done(fmtDuration(v.duration || 0), ""), 3000);
   });
 
 const probeAudioDuration = (url: string): Promise<string> =>
@@ -327,11 +352,12 @@ const probeAudioDuration = (url: string): Promise<string> =>
     const finish = (value: string) => {
       if (settled) return;
       settled = true;
+      audio.src = "";
       resolve(value);
     };
     audio.addEventListener("loadedmetadata", () => finish(fmtDuration(audio.duration || 0)));
     audio.addEventListener("error", () => finish("00:00"));
-    setTimeout(() => finish(fmtDuration(audio.duration || 0)), 4000);
+    setTimeout(() => finish(fmtDuration(audio.duration || 0)), 3000);
   });
 
 export const importVideoFiles = async (files: FileList | File[]) => {
@@ -405,3 +431,4 @@ export const shareItems = async (items: { title: string; src: string }[]) => {
     alert(text);
   }
 };
+
