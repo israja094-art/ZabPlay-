@@ -44,6 +44,14 @@ const SONG_COVER_PLACEHOLDER =
   "data:image/svg+xml;charset=UTF-8," +
   encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300"><rect width="300" height="300" rx="28" fill="#111827"/><circle cx="150" cy="150" r="82" fill="#ffffff14"/><circle cx="150" cy="150" r="22" fill="#f8fafc"/><path d="M178 84v90.5a25 25 0 1 1-14-22.5V108l58-11v63.5a25 25 0 1 1-14-22.5V84z" fill="#cbd5e1"/></svg>`);
 
+// Duration Formatting Helper
+const fmtDuration = (sec: number) => {
+  if (!isFinite(sec) || sec <= 0) return "00:00";
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60);
+  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+};
+
 const loadDeleted = (key: string): Set<string> => {
   if (typeof window === "undefined") return new Set();
   try {
@@ -66,9 +74,20 @@ let mediaHydrated = false;
 const userVideos: Video[] = [];
 const userSongs: Song[] = [];
 
+// 🔥 Cache map jisse native duration bar bar extract na karna pade performance glitch ke bina
+const nativeDurationCache = new Map<string, { duration: string; thumb?: string }>();
+
 const computeState = (): State => {
-  const nv = getNativeVideos();
-  const ns = getNativeSongs();
+  const nv = getNativeVideos().map(video => {
+    const cached = nativeDurationCache.get(video.id);
+    return cached ? { ...video, duration: cached.duration, thumb: cached.thumb || video.thumb } : video;
+  });
+  
+  const ns = getNativeSongs().map(song => {
+    const cached = nativeDurationCache.get(song.id);
+    return cached ? { ...song, duration: cached.duration } : song;
+  });
+
   return {
     videos: [...nv, ...userVideos, ...defaultVideos.filter((v) => !deletedV.has(v.id))],
     songs: [...ns, ...userSongs, ...defaultSongs.filter((s) => !deletedS.has(s.id))],
@@ -81,6 +100,40 @@ const listeners = new Set<() => void>();
 const emit = () => {
   state = computeState();
   listeners.forEach((l) => l());
+};
+
+// 🔥 BACKGROUND NATIVE MEDIA PROBER (Background me 00:00 duration hatane ka dimaag)
+const probeNativeMediaBackground = async () => {
+  const nv = getNativeVideos();
+  const ns = getNativeSongs();
+
+  for (const video of nv) {
+    if (!nativeDurationCache.has(video.id) || nativeDurationCache.get(video.id)?.duration === "") {
+      try {
+        const meta = await probeVideo(video.src);
+        if (meta.duration && meta.duration !== "00:00") {
+          nativeDurationCache.set(video.id, meta);
+          queueMicrotask(() => emit());
+        }
+      } catch (e) {
+        console.warn("Background video probe dynamic skip", e);
+      }
+    }
+  }
+
+  for (const song of ns) {
+    if (!nativeDurationCache.has(song.id) || nativeDurationCache.get(song.id)?.duration === "") {
+      try {
+        const d = await probeAudioDuration(song.src);
+        if (d && d !== "00:00") {
+          nativeDurationCache.set(song.id, { duration: d });
+          queueMicrotask(() => emit());
+        }
+      } catch (e) {
+        console.warn("Background audio probe dynamic skip", e);
+      }
+    }
+  }
 };
 
 const openDb = (): Promise<IDBDatabase | null> =>
@@ -178,7 +231,13 @@ const subscribe = (l: () => void) => {
     deletedS = loadDeleted(LS_DELETED_S);
     queueMicrotask(() => emit());
     void hydratePersistedMedia();
-    subscribeNativeMedia(() => emit());
+    
+    // Native media update monitor hook
+    subscribeNativeMedia(() => {
+      emit();
+      void probeNativeMediaBackground();
+    });
+    
     void runNativeScan(true);
     void wireAutoRescan();
   }
@@ -221,13 +280,6 @@ export const deleteSongs = (ids: string[]) => {
   }
   saveDeleted(LS_DELETED_S, deletedS);
   emit();
-};
-
-const fmtDuration = (sec: number) => {
-  if (!isFinite(sec) || sec <= 0) return "00:00";
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60);
-  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 };
 
 const probeVideo = (url: string): Promise<{ duration: string; thumb: string }> =>
