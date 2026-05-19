@@ -22,7 +22,7 @@ export function MediaConverter({ videoSrc, videoTitle }: MediaConverterProps) {
   ];
 
   const triggerWebFallbackDownload = (base64: string, filename: string) => {
-    // Converts clean non-corrupt base64 string back into actionable binary blob stream
+    // Converts clean non-corrupt base64 string back into actionable binary blob stream safely
     const byteCharacters = atob(base64);
     const byteNumbers = new Array(byteCharacters.length);
     for (let i = 0; i < byteCharacters.length; i++) {
@@ -42,7 +42,7 @@ export function MediaConverter({ videoSrc, videoTitle }: MediaConverterProps) {
     setTimeout(() => {
       document.body.removeChild(anchor);
       URL.revokeObjectURL(webUrl);
-    }, 200);
+    }, 250);
   };
 
   const startConversion = async (mode: "MP3" | "Video", resLabel = "") => {
@@ -66,11 +66,13 @@ export function MediaConverter({ videoSrc, videoTitle }: MediaConverterProps) {
 
       worker.onmessage = async (e) => {
         const data = e.data;
+        
         if (data.type === "progress") {
+          // Sync live incremental progress from background encoder loop
           setProgress(data.progress);
         } else if (data.type === "done") {
           try {
-            // First Priority: Save via Native Capacitor Bridge File-System Array
+            // First Priority: Write data directly into Local System Memory Path
             await Filesystem.writeFile({
               path: data.name,
               data: data.base64,
@@ -78,16 +80,16 @@ export function MediaConverter({ videoSrc, videoTitle }: MediaConverterProps) {
               recursive: true
             });
             
-            // Triggering backup download simultaneously to guarantee availability in Notifications panel
+            // Simultaneously triggering web pipe anchor to bypass notification bar hooks
             triggerWebFallbackDownload(data.base64, data.name);
             
-            setStatus("success");
             setProgress(100);
+            setStatus("success");
           } catch (writeError) {
-            console.log("Switching routing stream directly to native system anchor...", writeError);
+            console.log("Capacitor bypass - running web download routing framework instead...", writeError);
             triggerWebFallbackDownload(data.base64, data.name);
-            setStatus("success");
             setProgress(100);
+            setStatus("success");
           }
           worker.terminate();
         } else if (data.type === "error") {
@@ -159,12 +161,12 @@ export function MediaConverter({ videoSrc, videoTitle }: MediaConverterProps) {
       )}
 
       {status === "success" && (
-        <div className="flex flex-col items-center justify-center py-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-center">
+        <div className="flex flex-col items-center justify-center py-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-center animate-in fade-in duration-200">
           <div className="h-9 w-9 rounded-full bg-emerald-500 flex items-center justify-center text-white mb-2 shadow-md shadow-emerald-500/20">
             <Check className="h-5 w-5 stroke-[3]" />
           </div>
           <h4 className="text-xs font-bold text-emerald-500">File Processed Successfully!</h4>
-          <p className="text-[10px] text-muted-foreground mt-0.5 px-6">Check your device status-bar notifications or your internal storage Downloads/Documents folder.</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5 px-6">Check your device status-bar notifications or your internal storage Downloads folder.</p>
           <button
             onClick={() => setStatus("idle")}
             className="mt-3 px-4 py-1.5 bg-background border border-border rounded-lg text-[10px] font-black text-foreground uppercase tracking-wider active:scale-95 transition-all"
@@ -188,3 +190,4 @@ export function MediaConverter({ videoSrc, videoTitle }: MediaConverterProps) {
     </div>
   );
 }
+
