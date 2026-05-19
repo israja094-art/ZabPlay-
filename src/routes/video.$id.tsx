@@ -4,6 +4,7 @@ import { ArrowLeft, MoreVertical, Trash2, Play, AudioLines, Share2 } from "lucid
 import { useMediaStore, deleteVideos, shareItems } from "@/lib/media-store";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { BottomTabs } from "@/components/BottomTabs";
+import { MediaConverter } from "@/components/MediaConverter"; // 🔥 Naya stylish panel import kiya
 
 export const Route = createFileRoute("/video/$id")({
   component: VideoPage,
@@ -75,6 +76,9 @@ function VideoPage() {
           <h1 className="text-sm font-semibold text-foreground line-clamp-2">{current.title}</h1>
           <p className="text-xs text-muted-foreground mt-0.5">{current.duration}</p>
         </div>
+
+        {/* 🔥 STYLISH TOOLKIT PANEL: Title aur Duration ke thik niche perfectly set */}
+        <MediaConverter videoSrc={current.src} videoTitle={current.title} />
       </div>
 
       {/* Premium & Bigger Video List Grid Layer */}
@@ -191,3 +195,4 @@ function VideoPage() {
     </div>
   );
 }
+
