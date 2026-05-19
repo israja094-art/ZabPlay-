@@ -4,7 +4,6 @@ import { ArrowLeft, MoreVertical, Trash2, Play, AudioLines, Share2 } from "lucid
 import { useMediaStore, deleteVideos, shareItems } from "@/lib/media-store";
 import { VideoPlayer } from "@/components/VideoPlayer";
 import { BottomTabs } from "@/components/BottomTabs";
-import { MediaConverter } from "@/components/MediaConverter"; // 🔥 Naya stylish panel import kiya
 
 export const Route = createFileRoute("/video/$id")({
   component: VideoPage,
@@ -16,7 +15,7 @@ function VideoPage() {
   const { videos: list } = useMediaStore();
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [playerControlsVisible, setPlayerControlsVisible] = useState(true); // Tracks player overlay visibility state
+  const [playerControlsVisible, setPlayerControlsVisible] = useState(true); 
   const menuRef = useRef<HTMLDivElement>(null);
   const current = list.find((v) => v.id === id) ?? list[0];
 
@@ -37,7 +36,6 @@ function VideoPage() {
     const len = list.length;
     if (!len) return;
     const next = list[((i % len) + len) % len];
-    // Block list scroll resetting on next/prev click trigger
     void navigate({ 
       to: "/video/$id", 
       params: { id: next.id },
@@ -47,7 +45,6 @@ function VideoPage() {
 
   return (
     <div className="min-h-screen bg-background mx-auto max-w-md pb-20">
-      {/* Sticky locked player */}
       <div 
         className="sticky top-0 z-20 bg-black touch-none"
         onTouchMove={(e) => e.stopPropagation()}
@@ -57,10 +54,9 @@ function VideoPage() {
             src={current.src}
             onPrev={() => goTo(idx - 1)}
             onNext={() => goTo(idx + 1)}
-            onControlsVisibilityChange={(visible) => setPlayerControlsVisible(visible)} // Sync dynamic hide visibility state
+            onControlsVisibilityChange={(visible) => setPlayerControlsVisible(visible)}
           />
           
-          {/* Back Arrow Toggle Option — Ab yeh player controls ke sath hi smooth hide/show hoga */}
           <Link
             to="/"
             resetScroll={false}
@@ -76,12 +72,8 @@ function VideoPage() {
           <h1 className="text-sm font-semibold text-foreground line-clamp-2">{current.title}</h1>
           <p className="text-xs text-muted-foreground mt-0.5">{current.duration}</p>
         </div>
-
-        {/* 🔥 STYLISH TOOLKIT PANEL: Title aur Duration ke thik niche perfectly set */}
-        <MediaConverter videoSrc={current.src} videoTitle={current.title} />
       </div>
 
-      {/* Premium & Bigger Video List Grid Layer */}
       <ul className="px-3 pt-3 space-y-2">
         {list.map((v) => {
           const active = v.id === current.id;
@@ -94,7 +86,6 @@ function VideoPage() {
               >
                 <button
                   onClick={() => {
-                    // 🔥 STRICT FIX: resetScroll false lagaya taaki click karne par list jump na kare!
                     void navigate({ 
                       to: "/video/$id", 
                       params: { id: v.id }, 
@@ -103,7 +94,6 @@ function VideoPage() {
                   }}
                   className="flex flex-1 gap-3 items-center min-w-0 text-left"
                 >
-                  {/* Bigger Thumbnail Framework */}
                   <div className="relative h-20 w-32 overflow-hidden rounded-lg border border-border/60 bg-secondary/70 flex-shrink-0">
                     <img
                       src={v.thumb}
@@ -116,11 +106,7 @@ function VideoPage() {
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p
-                      className={`text-sm line-clamp-2 font-medium ${
-                        active ? "text-primary" : "text-foreground"
-                      }`}
-                    >
+                    <p className={`text-sm line-clamp-2 font-medium ${active ? "text-primary" : "text-foreground"}`}>
                       {v.title}
                     </p>
                   </div>
@@ -137,7 +123,6 @@ function VideoPage() {
                       setOpenMenu(openMenu === v.id ? null : v.id);
                     }}
                     className="p-2 text-muted-foreground"
-                    aria-label="More"
                   >
                     <MoreVertical className="h-4 w-4" />
                   </button>
