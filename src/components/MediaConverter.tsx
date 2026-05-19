@@ -2,6 +2,9 @@ import { useState } from "react";
 import { Music, Video, Check, AlertCircle, ChevronDown } from "lucide-react";
 import { createFFmpegWorker } from "@/lib/ffmpeg-worker";
 
+// Capacitor native background storage plugin engine imports safely
+import { Filesystem, Directory } from "@capacitor/filesystem";
+
 interface MediaConverterProps {
   videoSrc: string;
   videoTitle: string;
@@ -15,9 +18,9 @@ export function MediaConverter({ videoSrc, videoTitle }: MediaConverterProps) {
   const [selectedRes, setSelectedRes] = useState("");
 
   const resolutions = [
-    { label: "480p (Medium)", val: "480p" },
+    { label: "480p (Medium Quality)", val: "480p" },
     { label: "360p (Low Quality)", val: "360p" },
-    { label: "240p (Super Saver)", val: "240p" },
+    { label: "240p (Super Saver Quality)", val: "240p" },
   ];
 
   const startConversion = async (mode: "MP3" | "Video", resLabel = "") => {
@@ -28,6 +31,7 @@ export function MediaConverter({ videoSrc, videoTitle }: MediaConverterProps) {
       setStatus("processing");
       setProgress(0);
 
+      // Offline caching structures
       const response = await fetch(videoSrc);
       const blob = await response.blob();
       const fileObj = new File([blob], videoTitle || "video.mp4", { type: blob.type });
@@ -39,30 +43,37 @@ export function MediaConverter({ videoSrc, videoTitle }: MediaConverterProps) {
         resolution: resLabel,
       });
 
-      worker.onmessage = (e) => {
+      worker.onmessage = async (e) => {
         const data = e.data;
         if (data.type === "progress") {
           setProgress(data.progress);
         } else if (data.type === "done") {
-          setStatus("success");
-          setProgress(100);
+          try {
+            // 🔥 REAL ANDROID FIXED PIPE: Bypass browser and inject file into local phone system storage
+            await Filesystem.writeFile({
+              path: data.name,
+              data: data.base64,
+              directory: Directory.Documents, // Saves directly into internal local native files storage/documents directory folder path
+            });
 
-          // Real download bridge anchor to enforce system storage pipe writing
-          const downloadUrl = URL.createObjectURL(data.blob);
-          const downloadLink = document.createElement("a");
-          downloadLink.href = downloadUrl;
-          downloadLink.download = data.name;
-          
-          // Appending node safely to document DOM scope for programmatic click execution
-          document.body.appendChild(downloadLink);
-          downloadLink.click();
-          
-          // Garbage collection cleanup to avoid memory leaks on big files
-          setTimeout(() => {
-            document.body.removeChild(downloadLink);
-            URL.revokeObjectURL(downloadUrl);
-          }, 150);
-
+            setStatus("success");
+            setProgress(100);
+          } catch (writeError) {
+            console.error("Native write error, falling back to web link:", writeError);
+            
+            // Web view alternative layout fallback mechanism if native system permissions aren't synced yet
+            const rawBlob = await (await fetch(`data:application/octet-stream;base64,${data.base64}`)).blob();
+            const webUrl = URL.createObjectURL(rawBlob);
+            const anchor = document.createElement("a");
+            anchor.href = webUrl;
+            anchor.download = data.name;
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+            
+            setStatus("success");
+            setProgress(100);
+          }
           worker.terminate();
         } else if (data.type === "error") {
           setStatus("error");
@@ -74,14 +85,12 @@ export function MediaConverter({ videoSrc, videoTitle }: MediaConverterProps) {
     }
   };
 
-  // Circular Loader Geometry Calculations
   const radius = 28;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress / 100) * circumference;
 
   return (
     <div className="w-full px-4 py-3 bg-background/95 border-b border-border/40 backdrop-blur-sm">
-      {/* Idle Mode: Selection Layout Buttons */}
       {status === "idle" && (
         <div className="relative flex gap-2 w-full">
           <div className="relative flex-1">
@@ -95,9 +104,8 @@ export function MediaConverter({ videoSrc, videoTitle }: MediaConverterProps) {
               <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 ${showResolutions ? "rotate-180" : ""}`} />
             </button>
 
-            {/* Premium Absolute Options Popover Panel */}
             {showResolutions && (
-              <div className="absolute left-0 right-0 bottom-12 z-50 bg-popover/95 border border-border rounded-xl shadow-2xl py-1 overflow-hidden backdrop-blur-md animate-in fade-in slide-in-from-bottom-2 duration-150">
+              <div className="absolute left-0 right-0 bottom-12 z-50 bg-popover/95 border border-border rounded-xl shadow-2xl py-1 overflow-hidden backdrop-blur-md">
                 {resolutions.map((r) => (
                   <button
                     key={r.val}
@@ -120,34 +128,12 @@ export function MediaConverter({ videoSrc, videoTitle }: MediaConverterProps) {
         </div>
       )}
 
-      {/* Processing Mode: High Tech Circular Ring Gola Indicator */}
       {status === "processing" && (
-        <div className="flex flex-col items-center justify-center py-3 bg-secondary/20 border border-border/30 rounded-2xl animate-in fade-in duration-200">
+        <div className="flex flex-col items-center justify-center py-3 bg-secondary/20 border border-border/30 rounded-2xl">
           <div className="relative flex items-center justify-center h-16 w-16">
             <svg className="absolute transform -rotate-90 w-full h-full">
-              {/* Track Ring */}
-              <circle
-                cx="32"
-                cy="32"
-                r={radius}
-                className="text-muted-foreground/15"
-                strokeWidth="3.5"
-                stroke="currentColor"
-                fill="transparent"
-              />
-              {/* Dynamic Progress Active Fill Ring */}
-              <circle
-                cx="32"
-                cy="32"
-                r={radius}
-                className="text-primary transition-all duration-150 ease-out"
-                strokeWidth="3.5"
-                strokeDasharray={circumference}
-                strokeDashoffset={strokeDashoffset}
-                strokeLinecap="round"
-                stroke="currentColor"
-                fill="transparent"
-              />
+              <circle cx="32" cy="32" r={radius} className="text-muted-foreground/15" strokeWidth="3.5" stroke="currentColor" fill="transparent" />
+              <circle cx="32" cy="32" r={radius} className="text-primary transition-all duration-150 ease-out" strokeWidth="3.5" strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round" stroke="currentColor" fill="transparent" />
             </svg>
             <span className="text-xs font-black text-foreground">{progress}%</span>
           </div>
@@ -157,14 +143,13 @@ export function MediaConverter({ videoSrc, videoTitle }: MediaConverterProps) {
         </div>
       )}
 
-      {/* Success View State: Clean Emerald Success Frame */}
       {status === "success" && (
-        <div className="flex flex-col items-center justify-center py-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-center animate-in scale-in duration-200">
+        <div className="flex flex-col items-center justify-center py-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-center">
           <div className="h-9 w-9 rounded-full bg-emerald-500 flex items-center justify-center text-white mb-2 shadow-md shadow-emerald-500/20">
             <Check className="h-5 w-5 stroke-[3]" />
           </div>
           <h4 className="text-xs font-bold text-emerald-500">File Processed Successfully!</h4>
-          <p className="text-[10px] text-muted-foreground mt-0.5 px-6">Check your notification panel or system Downloads folder</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5 px-6">Saved directly inside your phone's internal storage / Documents directory folder</p>
           <button
             onClick={() => setStatus("idle")}
             className="mt-3 px-4 py-1.5 bg-background border border-border rounded-lg text-[10px] font-black text-foreground uppercase tracking-wider active:scale-95 transition-all"
@@ -174,17 +159,13 @@ export function MediaConverter({ videoSrc, videoTitle }: MediaConverterProps) {
         </div>
       )}
 
-      {/* Error View State Handling Panel */}
       {status === "error" && (
         <div className="flex flex-col items-center justify-center py-4 bg-destructive/10 border border-destructive/20 rounded-2xl text-center">
           <div className="h-8 w-8 rounded-full bg-destructive/20 flex items-center justify-center text-destructive mb-2">
             <AlertCircle className="h-4 w-4" />
           </div>
-          <p className="text-xs font-bold text-destructive">Storage pipe writing aborted</p>
-          <button
-            onClick={() => setStatus("idle")}
-            className="mt-2.5 px-3 py-1 bg-destructive text-destructive-foreground font-bold rounded-lg text-[10px] uppercase active:scale-95"
-          >
+          <p className="text-xs font-bold text-destructive">Storage pipeline write error</p>
+          <button onClick={() => setStatus("idle")} className="mt-2.5 px-3 py-1 bg-destructive text-destructive-foreground font-bold rounded-lg text-[10px] uppercase active:scale-95">
             Try Again
           </button>
         </div>
