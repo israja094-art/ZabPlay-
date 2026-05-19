@@ -55,13 +55,15 @@ export function MediaConverter({ videoSrc, videoTitle }: MediaConverterProps) {
 
       const response = await fetch(videoSrc);
       const blob = await response.blob();
+      
+      // Allocating consistent structural binary layers for absolute compatibility
       const fileObj = new File([blob], videoTitle || "video.mp4", { type: blob.type });
 
       const worker = createFFmpegWorker();
       worker.postMessage({
         action: mode === "MP3" ? "mp3" : "compress",
         file: fileObj,
-        resolution: resLabel,
+        resolution: resLabel
       });
 
       worker.onmessage = async (e) => {
