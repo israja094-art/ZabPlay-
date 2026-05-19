@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { Music, Video, Check, AlertCircle, ChevronDown } from "lucide-react";
 import { createFFmpegWorker } from "@/lib/ffmpeg-worker";
-
-// Capacitor native background storage plugin engine imports safely
 import { Filesystem, Directory } from "@capacitor/filesystem";
 
 interface MediaConverterProps {
@@ -23,6 +21,30 @@ export function MediaConverter({ videoSrc, videoTitle }: MediaConverterProps) {
     { label: "240p (Super Saver Quality)", val: "240p" },
   ];
 
+  const triggerWebFallbackDownload = (base64: string, filename: string) => {
+    // Converts clean non-corrupt base64 string back into actionable binary blob stream
+    const byteCharacters = atob(base64);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blobType = filename.endsWith(".mp3") ? "audio/mp3" : "video/mp4";
+    const fileBlob = new Blob([byteArray], { type: blobType });
+
+    const webUrl = URL.createObjectURL(fileBlob);
+    const anchor = document.createElement("a");
+    anchor.href = webUrl;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    
+    setTimeout(() => {
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(webUrl);
+    }, 200);
+  };
+
   const startConversion = async (mode: "MP3" | "Video", resLabel = "") => {
     try {
       setCurrentMode(mode);
@@ -31,7 +53,6 @@ export function MediaConverter({ videoSrc, videoTitle }: MediaConverterProps) {
       setStatus("processing");
       setProgress(0);
 
-      // Offline caching structures
       const response = await fetch(videoSrc);
       const blob = await response.blob();
       const fileObj = new File([blob], videoTitle || "video.mp4", { type: blob.type });
@@ -49,28 +70,22 @@ export function MediaConverter({ videoSrc, videoTitle }: MediaConverterProps) {
           setProgress(data.progress);
         } else if (data.type === "done") {
           try {
-            // 🔥 REAL ANDROID FIXED PIPE: Bypass browser and inject file into local phone system storage
+            // First Priority: Save via Native Capacitor Bridge File-System Array
             await Filesystem.writeFile({
               path: data.name,
               data: data.base64,
-              directory: Directory.Documents, // Saves directly into internal local native files storage/documents directory folder path
+              directory: Directory.Documents,
+              recursive: true
             });
-
+            
+            // Triggering backup download simultaneously to guarantee availability in Notifications panel
+            triggerWebFallbackDownload(data.base64, data.name);
+            
             setStatus("success");
             setProgress(100);
           } catch (writeError) {
-            console.error("Native write error, falling back to web link:", writeError);
-            
-            // Web view alternative layout fallback mechanism if native system permissions aren't synced yet
-            const rawBlob = await (await fetch(`data:application/octet-stream;base64,${data.base64}`)).blob();
-            const webUrl = URL.createObjectURL(rawBlob);
-            const anchor = document.createElement("a");
-            anchor.href = webUrl;
-            anchor.download = data.name;
-            document.body.appendChild(anchor);
-            anchor.click();
-            document.body.removeChild(anchor);
-            
+            console.log("Switching routing stream directly to native system anchor...", writeError);
+            triggerWebFallbackDownload(data.base64, data.name);
             setStatus("success");
             setProgress(100);
           }
@@ -149,7 +164,7 @@ export function MediaConverter({ videoSrc, videoTitle }: MediaConverterProps) {
             <Check className="h-5 w-5 stroke-[3]" />
           </div>
           <h4 className="text-xs font-bold text-emerald-500">File Processed Successfully!</h4>
-          <p className="text-[10px] text-muted-foreground mt-0.5 px-6">Saved directly inside your phone's internal storage / Documents directory folder</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5 px-6">Check your device status-bar notifications or your internal storage Downloads/Documents folder.</p>
           <button
             onClick={() => setStatus("idle")}
             className="mt-3 px-4 py-1.5 bg-background border border-border rounded-lg text-[10px] font-black text-foreground uppercase tracking-wider active:scale-95 transition-all"
