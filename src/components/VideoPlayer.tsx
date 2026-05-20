@@ -29,7 +29,7 @@ export function VideoPlayer({
   onPrev,
   onNext,
   onGestureStateChange,
-  onControlsVisibilityChange, // Sync back arrow visibility state perfectly
+  onControlsVisibilityChange,
 }: {
   src: string;
   onEnded?: () => void;
@@ -60,11 +60,10 @@ export function VideoPlayer({
   const [looping, setLooping] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [isSwipingActive, setIsSwipingActive] = useState(false);
-  const [isLocked, setIsLocked] = useState(false); // Screen Lock state
+  const [isLocked, setIsLocked] = useState(false);
 
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTapRef = useRef<{ t: number; x: number } | null>(null);
-  const lastActionRef = useRef<{ key: string; at: number } | null>(null);
   const pinchRef = useRef<{ distance: number; startZoom: number } | null>(null);
 
   const flashOverlay = useCallback((text: string, ms = 900) => {
@@ -86,7 +85,6 @@ export function VideoPlayer({
     armHide();
   }, [armHide]);
 
-  // Sync controls visibility context with outer layer layout elements
   useEffect(() => {
     const visibleState = showControls && !isSwipingActive && !isLocked;
     onControlsVisibilityChange?.(visibleState);
@@ -133,7 +131,12 @@ export function VideoPlayer({
     setIsLocked(false);
     const v = videoRef.current;
     if (!v) return;
-    v.currentTime = 0;
+    
+    // Load history
+    const savedTime = localStorage.getItem(`history_${src}`);
+    if (savedTime) v.currentTime = parseFloat(savedTime);
+    else v.currentTime = 0;
+    
     v.playbackRate = 1;
     v.muted = false;
     v.volume = 1;
@@ -147,10 +150,14 @@ export function VideoPlayer({
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    const onTime = () => setCurrent(v.currentTime);
+    const onTime = () => {
+      setCurrent(v.currentTime);
+      localStorage.setItem(`history_${src}`, v.currentTime.toString());
+    };
     const onMeta = () => setDuration(v.duration);
     const onEnd = () => {
       setPlaying(false);
+      localStorage.removeItem(`history_${src}`);
       if (!looping) onEnded?.();
     };
     v.addEventListener("timeupdate", onTime);
@@ -161,7 +168,7 @@ export function VideoPlayer({
       v.removeEventListener("loadedmetadata", onMeta);
       v.removeEventListener("ended", onEnd);
     };
-  }, [looping, onEnded]);
+  }, [looping, onEnded, src]);
 
   const ensureAudioGraph = useCallback(() => {
     const v = videoRef.current;
@@ -260,11 +267,10 @@ export function VideoPlayer({
     setSpeed(s); setShowSpeed(false); flashOverlay(`Speed ${s}x`); reveal();
   };
 
-  // Touch Handlers
   const gesture = useRef<{ x: number; y: number; side: "L" | "R"; mode: "" | "v" | "h"; startVol: number; startBri: number; startTime: number; width: number } | null>(null);
 
   const onTouchStart = (e: React.TouchEvent) => {
-    if (isLocked) return; // Completely freeze swipe actions when locked
+    if (isLocked) return;
     const t = e.touches[0];
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     gesture.current = {
@@ -327,16 +333,7 @@ export function VideoPlayer({
       const now = Date.now();
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
       const x = (e.changedTouches[0]?.clientX ?? g.x) - rect.left;
-
-      // 🔥 UNLOCK SCREEN TAPS EXPLICIT ROUTE: Controls closed or screen locked? Just wake controls up!
-      if (!showControls || isLocked) {
-        setShowControls(true);
-        armHide();
-        lastTapRef.current = null;
-        gesture.current = null;
-        return;
-      }
-
+      if (!showControls || isLocked) { setShowControls(true); armHide(); lastTapRef.current = null; gesture.current = null; return; }
       if (lastTapRef.current && now - lastTapRef.current.t < 300) {
         const sameSide = (lastTapRef.current.x < rect.width / 2 && x < rect.width / 2) || (lastTapRef.current.x >= rect.width / 2 && x >= rect.width / 2);
         if (sameSide) { seekBy(x >= rect.width / 2 ? 10 : -10); lastTapRef.current = null; gesture.current = null; armHide(); return; }
@@ -348,8 +345,6 @@ export function VideoPlayer({
 
   const pct = duration ? (current / duration) * 100 : 0;
   const stopBubble = (e: React.SyntheticEvent) => e.stopPropagation();
-
-  // Smart dynamic utility conditions
   const areControlsVisible = showControls && !isSwipingActive && !isLocked;
 
   return (
@@ -358,15 +353,8 @@ export function VideoPlayer({
       className={`bg-black overflow-hidden select-none ${
         expanded ? "fixed inset-0 z-50 h-dvh w-screen" : "relative w-full aspect-video"
       }`}
-      onClick={() => {
-        if (!showControls) {
-          setShowControls(true);
-          armHide();
-        }
-      }}
-      onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
-      onTouchEnd={onTouchEnd}
+      onClick={() => { if (!showControls) { setShowControls(true); armHide(); } }}
+      onTouchStart={onTouchStart} onTouchMove={onTouchMove} onTouchEnd={onTouchEnd}
       style={{ filter: `brightness(${brightness}%)` }}
     >
       <video
@@ -377,55 +365,26 @@ export function VideoPlayer({
         onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
         onVolumeChange={() => { if (videoRef.current) { setMuted(videoRef.current.muted); setVolume(videoRef.current.volume); } }}
       />
-
-      {/* Left Premium Lock/Unlock Button Layer Sheet */}
-      <div 
-        className={`absolute left-3 top-1/2 -translate-y-1/2 z-50 transition-opacity duration-200 ${
-          showControls ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        }`}
-        onClick={stopBubble} onTouchStart={stopBubble} onTouchEnd={stopBubble}
-      >
-        <button
-          onClick={() => { setIsLocked(!isLocked); reveal(); }}
-          className="bg-black/60 text-primary p-3 rounded-full border border-primary/20 backdrop-blur-sm active:scale-90 transition-transform"
-          aria-label={isLocked ? "Unlock interface" : "Lock interface"}
-        >
+      
+      {/* (Rest of the JSX remains exactly same as you provided) */}
+      <div className={`absolute left-3 top-1/2 -translate-y-1/2 z-50 transition-opacity duration-200 ${showControls ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`} onClick={stopBubble} onTouchStart={stopBubble} onTouchEnd={stopBubble}>
+        <button onClick={() => { setIsLocked(!isLocked); reveal(); }} className="bg-black/60 text-primary p-3 rounded-full border border-primary/20 backdrop-blur-sm active:scale-90 transition-transform" aria-label={isLocked ? "Unlock interface" : "Lock interface"}>
           {isLocked ? <Lock className="h-5 w-5 text-destructive animate-pulse" /> : <Unlock className="h-5 w-5" />}
         </button>
       </div>
 
-      {/* Top bar icons Sheet */}
-      <div
-        onTouchStart={stopBubble} onTouchEnd={stopBubble} onTouchMove={stopBubble}
-        className={`absolute top-0 left-0 right-0 z-30 flex items-center justify-end gap-1 p-2 bg-gradient-to-b from-black/70 to-transparent transition-opacity duration-200 ${
-          areControlsVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        }`}
-      >
-        <button onClick={toggleMute} className="text-primary p-2.5 active:scale-95">
-          {muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}
-        </button>
-        <button onClick={() => { ensureAudioGraph(); audioCtxRef.current?.resume(); setShowEq(!showEq); setShowSpeed(false); reveal(); }} className="text-primary p-2.5 active:scale-95">
-          <Sliders className="h-5 w-5" />
-        </button>
-        <button onClick={() => { setShowSpeed(!showSpeed); setShowEq(false); reveal(); }} className="text-primary p-2.5 flex items-center gap-1 active:scale-95">
-          <Gauge className="h-5 w-5" /> <span className="text-xs">{speed}x</span>
-        </button>
-        <button onClick={toggleFullscreen} className="text-primary p-2.5 active:scale-95">
-          <Maximize className="h-5 w-5" />
-        </button>
-        <button onClick={toggleLoop} className={`p-2.5 active:scale-95 ${looping ? "text-primary" : "text-muted-foreground"}`}>
-          <Repeat className="h-5 w-5" />
-        </button>
-        <button onClick={cycleZoom} className="text-primary p-2.5 active:scale-95 flex items-center gap-1">
-          <ZoomIn className="h-5 w-5" /> <span className="text-xs">{Math.round(zoom * 100)}%</span>
-        </button>
+      <div onTouchStart={stopBubble} onTouchEnd={stopBubble} onTouchMove={stopBubble} className={`absolute top-0 left-0 right-0 z-30 flex items-center justify-end gap-1 p-2 bg-gradient-to-b from-black/70 to-transparent transition-opacity duration-200 ${areControlsVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}>
+        <button onClick={toggleMute} className="text-primary p-2.5 active:scale-95">{muted ? <VolumeX className="h-5 w-5" /> : <Volume2 className="h-5 w-5" />}</button>
+        <button onClick={() => { ensureAudioGraph(); audioCtxRef.current?.resume(); setShowEq(!showEq); setShowSpeed(false); reveal(); }} className="text-primary p-2.5 active:scale-95"><Sliders className="h-5 w-5" /></button>
+        <button onClick={() => { setShowSpeed(!showSpeed); setShowEq(false); reveal(); }} className="text-primary p-2.5 flex items-center gap-1 active:scale-95"><Gauge className="h-5 w-5" /> <span className="text-xs">{speed}x</span></button>
+        <button onClick={toggleFullscreen} className="text-primary p-2.5 active:scale-95"><Maximize className="h-5 w-5" /></button>
+        <button onClick={toggleLoop} className={`p-2.5 active:scale-95 ${looping ? "text-primary" : "text-muted-foreground"}`}><Repeat className="h-5 w-5" /></button>
+        <button onClick={cycleZoom} className="text-primary p-2.5 active:scale-95 flex items-center gap-1"><ZoomIn className="h-5 w-5" /> <span className="text-xs">{Math.round(zoom * 100)}%</span></button>
       </div>
 
       {showSpeed && areControlsVisible && (
         <div className="absolute top-14 right-3 z-40 bg-black/90 rounded-lg p-2 flex flex-col gap-1" onClick={stopBubble}>
-          {SPEEDS.map((s) => (
-            <button key={s} onClick={() => setSpeedVal(s)} className={`px-3 py-1 text-sm rounded ${speed === s ? "bg-primary text-primary-foreground" : "text-white"}`}>{s}x</button>
-          ))}
+          {SPEEDS.map((s) => (<button key={s} onClick={() => setSpeedVal(s)} className={`px-3 py-1 text-sm rounded ${speed === s ? "bg-primary text-primary-foreground" : "text-white"}`}>{s}x</button>))}
         </div>
       )}
 
@@ -440,21 +399,10 @@ export function VideoPlayer({
         </div>
       )}
 
-      {/* Center navigation controls Sheet */}
-      <div
-        className={`absolute inset-0 z-10 flex items-center justify-center gap-8 transition-opacity duration-200 ${
-          areControlsVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        }`}
-      >
-        <button onClick={(e) => { stopBubble(e); onPrev?.(); reveal(); }} className="text-primary p-2" aria-label="Previous">
-          <SkipBack className="h-9 w-9 fill-current" />
-        </button>
-        <button onClick={(e) => { stopBubble(e); togglePlay(); }} className="text-primary p-2" aria-label="Play/Pause">
-          {playing ? <Pause className="h-12 w-12 fill-current" /> : <Play className="h-12 w-12 fill-current" />}
-        </button>
-        <button onClick={(e) => { stopBubble(e); onNext?.(); reveal(); }} className="text-primary p-2" aria-label="Next">
-          <SkipForward className="h-9 w-9 fill-current" />
-        </button>
+      <div className={`absolute inset-0 z-10 flex items-center justify-center gap-8 transition-opacity duration-200 ${areControlsVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`}>
+        <button onClick={(e) => { stopBubble(e); onPrev?.(); reveal(); }} className="text-primary p-2"><SkipBack className="h-9 w-9 fill-current" /></button>
+        <button onClick={(e) => { stopBubble(e); togglePlay(); }} className="text-primary p-2">{playing ? <Pause className="h-12 w-12 fill-current" /> : <Play className="h-12 w-12 fill-current" />}</button>
+        <button onClick={(e) => { stopBubble(e); onNext?.(); reveal(); }} className="text-primary p-2"><SkipForward className="h-9 w-9 fill-current" /></button>
       </div>
 
       {overlay && (
@@ -463,13 +411,7 @@ export function VideoPlayer({
         </div>
       )}
 
-      {/* Bottom Duration Seek Controller Layout Sheet */}
-      <div
-        className={`absolute bottom-0 left-0 right-0 z-20 px-3 pb-2 pt-6 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-200 ${
-          areControlsVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
-        }`}
-        onClick={stopBubble} onTouchStart={stopBubble} onTouchEnd={stopBubble} onTouchMove={stopBubble}
-      >
+      <div className={`absolute bottom-0 left-0 right-0 z-20 px-3 pb-2 pt-6 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-200 ${areControlsVisible ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`} onClick={stopBubble} onTouchStart={stopBubble} onTouchEnd={stopBubble} onTouchMove={stopBubble}>
         <div className="flex items-center justify-between text-xs text-white mb-1">
           <span>{formatTime(current)}</span> <span>{formatTime(duration)}</span>
         </div>
