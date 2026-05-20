@@ -33,6 +33,8 @@ type PersistedSong = {
 
 const LS_DELETED_V = "zabplay.deleted.videos";
 const LS_DELETED_S = "zabplay.deleted.songs";
+const LS_PRIVACY_V = "zabplay.privacy.videos"; // Privacy hidden videos storage track
+const LS_RENAMED_V = "zabplay.renamed.videos"; // Custom renamed native/default videos tracker
 const DB_NAME = "zabplay-media-db";
 const DB_VERSION = 1;
 const VIDEO_STORE = "videos";
@@ -67,8 +69,20 @@ const saveDeleted = (key: string, s: Set<string>) => {
   localStorage.setItem(key, JSON.stringify([...s]));
 };
 
+// Custom Names Load and Save Loader
+const loadRenamedMap = (): Record<string, string> => {
+  if (typeof window === "undefined") return {};
+  try {
+    return JSON.parse(localStorage.getItem(LS_RENAMED_V) || "{}");
+  } catch {
+    return {};
+  }
+};
+
 let deletedV = new Set<string>();
 let deletedS = new Set<string>();
+let privacyV = new Set<string>(); // Hidden layout videos state container
+let renamedMap: Record<string, string> = {}; // Video id to custom title map
 let hydratedFromStorage = false;
 let mediaHydrated = false;
 
@@ -81,7 +95,10 @@ const nativeDurationCache = new Map<string, { duration: string; thumb?: string }
 const computeState = (): State => {
   const nv = getNativeVideos().map(video => {
     const cached = nativeDurationCache.get(video.id);
-    return cached ? { ...video, duration: cached.duration, thumb: cached.thumb || video.thumb } : video;
+    const updatedTitle = renamedMap[video.id] || video.title; // Appending renamed names
+    return cached 
+      ? { ...video, title: updatedTitle, duration: cached.duration, thumb: cached.thumb || video.thumb } 
+      : { ...video, title: updatedTitle };
   });
   
   const ns = getNativeSongs().map(song => {
@@ -89,8 +106,13 @@ const computeState = (): State => {
     return cached ? { ...song, duration: cached.duration } : song;
   });
 
+  // Base list filter mapping with privacy state filter
+  const allVideos = [...nv, ...userVideos, ...defaultVideos].filter(
+    (v) => !deletedV.has(v.id) && !privacyV.has(v.id)
+  );
+
   return {
-    videos: [...nv, ...userVideos, ...defaultVideos.filter((v) => !deletedV.has(v.id))],
+    videos: allVideos,
     songs: [...ns, ...userSongs, ...defaultSongs.filter((s) => !deletedS.has(s.id))],
   };
 };
@@ -216,14 +238,16 @@ const hydratePersistedMedia = async () => {
   userVideos.splice(
     0,
     userVideos.length,
-    ...videos.map((video) => ({
-      id: video.id,
-      title: video.title,
-      duration: video.duration,
-      thumb: video.thumb,
-      // Agar path nahi hai toh "Imported Videos" set karenge taaki folder view mein sahi se dikhe
-      src: video.folderName ? `/${video.folderName}/${video.title}` : URL.createObjectURL(video.file),
-    })),
+    ...videos.map((video) => {
+      const updatedTitle = renamedMap[video.id] || video.title; // Appending custom user file name
+      return {
+        id: video.id,
+        title: updatedTitle,
+        duration: video.duration,
+        thumb: video.thumb,
+        src: video.folderName ? `/${video.folderName}/${updatedTitle}` : URL.createObjectURL(video.file),
+      };
+    }),
   );
 
   userSongs.splice(
@@ -247,6 +271,8 @@ const subscribe = (l: () => void) => {
     hydratedFromStorage = true;
     deletedV = loadDeleted(LS_DELETED_V);
     deletedS = loadDeleted(LS_DELETED_S);
+    privacyV = loadDeleted(LS_PRIVACY_V); // Loading secure privacy entries
+    renamedMap = loadRenamedMap(); // Loading active custom titles map
     queueMicrotask(() => emit());
     void hydratePersistedMedia();
     
@@ -301,6 +327,46 @@ export const deleteSongs = (ids: string[]) => {
   }
   saveDeleted(LS_DELETED_S, deletedS);
   emit();
+};
+
+// 🔥 REAL WORKING FEATURE: RENAME VIDEOS ENGINE
+export const renameVideoFile = async (id: string, newTitle: string) => {
+  if (!newTitle.trim()) return;
+  
+  renamedMap[id] = newTitle.trim();
+  localStorage.setItem(LS_RENAMED_V, JSON.stringify(renamedMap));
+
+  // Agar user ka manual file imported hai, toh IndexedDB record ko bhi real update karo
+  const userIdx = userVideos.findIndex((v) => v.id === id);
+  if (userIdx >= 0) {
+    userVideos[userIdx].title = newTitle.trim();
+    const dbVideos = await readAll<PersistedVideo>(VIDEO_STORE);
+    const targetData = dbVideos.find(v => v.id === id);
+    if (targetData) {
+      targetData.title = newTitle.trim();
+      await putOne<PersistedVideo>(VIDEO_STORE, targetData);
+    }
+  }
+  emit();
+};
+
+// 🔥 REAL WORKING FEATURE: HIDE / LOCK IN PRIVACY FOLDER ENGINE
+export const moveVideosToPrivacy = (ids: string[]) => {
+  for (const id of ids) {
+    privacyV.add(id);
+  }
+  saveDeleted(LS_PRIVACY_V, privacyV);
+  emit();
+};
+
+// 🔥 REAL WORKING FEATURE: READ ALL HIDDEN PRIVACY VIDEOS DATA
+export const getPrivacyVideos = async (): Promise<Video[]> => {
+  const nv = getNativeVideos().map(video => ({
+    ...video,
+    title: renamedMap[video.id] || video.title
+  }));
+  const allMedia = [...nv, ...userVideos, ...defaultVideos];
+  return allMedia.filter(v => privacyV.has(v.id));
 };
 
 const probeVideo = (url: string): Promise<{ duration: string; thumb: string }> =>
@@ -432,3 +498,4 @@ export const shareItems = async (items: { title: string; src: string }[]) => {
     alert(text);
   }
 };
+
