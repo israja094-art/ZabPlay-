@@ -93,14 +93,19 @@ const scanDir = async (
         const uri =
           entry.uri ||
           (await Filesystem.getUri({ path: childPath, directory: Directory.ExternalStorage })).uri;
+        
+        // CORRECTION: Video play karne ke liye webview URL chahiye hota hai
         const playable = Capacitor.convertFileSrc(uri);
+        
         if (VIDEO_EXT.test(entry.name)) {
           out.videos.push({
             id: `nv-${uri}`,
             title: titleFromPath(entry.name),
             duration: "",
             thumb: VIDEO_THUMB_PLACEHOLDER,
-            src: playable,
+            // --- FOLDER SEPARATION PATH ENHANCEMENT ---
+            // Hum src mein playable URL de rahe hain lekin index.tsx folders ke liye childPath track kar lega
+            src: childPath ? childPath : playable,
           });
         } else if (AUDIO_EXT.test(entry.name)) {
           out.songs.push({
@@ -134,17 +139,14 @@ export const runNativeScan = async (force = false): Promise<void> => {
     const Directory = fsMod.Directory;
     const Capacitor = coreMod.Capacitor;
 
-    // 🌟 Universal Android 9 to 15+ Permission Pop-up Bridge 
     try {
       let permStatus = await Filesystem.checkPermissions();
       
       if (permStatus.publicStorage !== "granted") {
         console.log("Forcing native storage permission prompt dialog...");
-        // Pehla attempt standard method se
         permStatus = await Filesystem.requestPermissions();
       }
 
-      // Android 13/14/15+ ke liye direct device window object se forced interaction bridge push karenge
       if (permStatus.publicStorage !== "granted" && typeof (window as any).Capacitor !== 'undefined') {
         const nativeBridge = (window as any).Capacitor.Plugins?.Permissions;
         if (nativeBridge && typeof nativeBridge.requestPermissions === 'function') {
@@ -156,9 +158,7 @@ export const runNativeScan = async (force = false): Promise<void> => {
     }
 
     const out: ScanResult = { videos: [], songs: [] };
-    // shallow root scan first
     await scanDir(Filesystem, Directory, Capacitor, "", 1, out);
-    // deeper scan in well-known folders
     for (const dir of ANDROID_MEDIA_DIRS) {
       await scanDir(Filesystem, Directory, Capacitor, dir, 3, out);
     }
@@ -166,6 +166,16 @@ export const runNativeScan = async (force = false): Promise<void> => {
     // dedupe by src
     const seenV = new Set<string>();
     nativeVideos = out.videos.filter((v) => (seenV.has(v.src) ? false : (seenV.add(v.src), true)));
+    
+    // Yahan hum convertFileSrc ko apply kar rahe hain taaki main video player bina crash hue videos load kar sake
+    nativeVideos = nativeVideos.map(v => {
+      if (!v.src.startsWith("http://") && !v.src.startsWith("https://") && !v.src.startsWith("content://") && !v.src.startsWith("file://")) {
+        // Safe check for folder paths to change into readable webview links for video element
+        return { ...v, src: Capacitor.convertFileSrc(v.id.replace("nv-", "")) };
+      }
+      return v;
+    });
+
     const seenS = new Set<string>();
     nativeSongs = out.songs.filter((s) => (seenS.has(s.src) ? false : (seenS.add(s.src), true)));
     lastScan = Date.now();
@@ -191,7 +201,5 @@ export const wireAutoRescan = async () => {
   } catch {
     /* plugin missing */
   }
-  // Periodic background check interval ko badha diya taaki launch time par heavy load na pare
   setInterval(() => void runNativeScan(false), 15000);
 };
-
