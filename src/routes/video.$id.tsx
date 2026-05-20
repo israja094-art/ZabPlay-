@@ -19,6 +19,15 @@ function VideoPage() {
   const menuRef = useRef<HTMLDivElement>(null);
   const current = list.find((v) => v.id === id) ?? list[0];
 
+  // 👑 FIXED: Player ko baar-baar reload hone se bachane ke liye src ko ref mein rakha
+  const videoSrcRef = useRef<string>("");
+  const videoIdRef = useRef<string>("");
+
+  if (current && current.id !== videoIdRef.current) {
+    videoIdRef.current = current.id;
+    videoSrcRef.current = current.src;
+  }
+
   useEffect(() => {
     setMounted(true);
     const onDoc = (e: MouseEvent) => {
@@ -50,8 +59,9 @@ function VideoPage() {
         onTouchMove={(e) => e.stopPropagation()}
       >
         <div className="relative">
+          {/* FIXED: Ab src ko hilaaye bina background mein history save hoti rahegi */}
           <VideoPlayer
-            src={current.src}
+            src={videoSrcRef.current}
             onPrev={() => goTo(idx - 1)}
             onNext={() => goTo(idx + 1)}
             onControlsVisibilityChange={(visible) => setPlayerControlsVisible(visible)}
@@ -180,3 +190,4 @@ function VideoPage() {
     </div>
   );
 }
+
