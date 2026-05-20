@@ -19,6 +19,7 @@ type PersistedVideo = {
   duration: string;
   thumb: string;
   file: Blob;
+  folderName?: string; // Naya parameter folder track karne ke liye
 };
 
 type PersistedSong = {
@@ -119,7 +120,6 @@ const probeNativeMediaBackground = async () => {
   for (const video of nv) {
     if (!nativeDurationCache.has(video.id) || nativeDurationCache.get(video.id)?.duration === "") {
       try {
-        // Har video processing ke pehle thread ko 300ms ka aaram denge taaki main player na atke
         await sleep(300);
         
         const meta = await probeVideo(video.src);
@@ -137,7 +137,7 @@ const probeNativeMediaBackground = async () => {
   for (const song of ns) {
     if (!nativeDurationCache.has(song.id) || nativeDurationCache.get(song.id)?.duration === "") {
       try {
-        await sleep(150); // Audio meta reads are lighter, 150ms slice is fine
+        await sleep(150);
         
         const d = await probeAudioDuration(song.src);
         if (d && d !== "00:00") {
@@ -221,7 +221,8 @@ const hydratePersistedMedia = async () => {
       title: video.title,
       duration: video.duration,
       thumb: video.thumb,
-      src: URL.createObjectURL(video.file),
+      // Agar path nahi hai toh "Imported Videos" set karenge taaki folder view mein sahi se dikhe
+      src: video.folderName ? `/${video.folderName}/${video.title}` : URL.createObjectURL(video.file),
     })),
   );
 
@@ -249,10 +250,8 @@ const subscribe = (l: () => void) => {
     queueMicrotask(() => emit());
     void hydratePersistedMedia();
     
-    // Native media update monitor hook
     subscribeNativeMedia(() => {
       emit();
-      // Browser requestIdleCallback fallback system checks wrapper
       if ('requestIdleCallback' in window) {
         window.requestIdleCallback(() => void probeNativeMediaBackground(), { timeout: 3000 });
       } else {
@@ -315,7 +314,6 @@ const probeVideo = (url: string): Promise<{ duration: string; thumb: string }> =
     const done = (duration: string, thumb: string) => {
       if (resolved) return;
       resolved = true;
-      // Clean resource instances to free processing thread RAM instantly
       v.src = "";
       v.load();
       resolve({ duration, thumb });
@@ -334,7 +332,7 @@ const probeVideo = (url: string): Promise<{ duration: string; thumb: string }> =
         c.height = Math.round((v.videoHeight / v.videoWidth) * 320) || 180;
         const ctx = c.getContext("2d");
         ctx?.drawImage(v, 0, 0, c.width, c.height);
-        done(fmtDuration(v.duration), c.toDataURL("image/jpeg", 0.6)); // Lower compression factor to 0.6 to minimize canvas execution frame delay
+        done(fmtDuration(v.duration), c.toDataURL("image/jpeg", 0.6));
       } catch {
         done(fmtDuration(v.duration), "");
       }
@@ -366,12 +364,14 @@ export const importVideoFiles = async (files: FileList | File[]) => {
     const id = `u-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const url = URL.createObjectURL(f);
     const { duration, thumb } = await probeVideo(url);
+    
+    // --- IMPORT FOLDER CORRECTION ---
     const video: Video = {
       id,
       title: f.name.replace(/\.[^.]+$/, ""),
       duration,
       thumb: thumb || VIDEO_THUMB_PLACEHOLDER,
-      src: url,
+      src: `/Imported Videos/${f.name}`, // Folder categorisation path simulation
     };
     userVideos.unshift(video);
     emit();
@@ -381,6 +381,7 @@ export const importVideoFiles = async (files: FileList | File[]) => {
       duration: video.duration,
       thumb: video.thumb,
       file: f,
+      folderName: "Imported Videos"
     });
   }
 };
@@ -431,4 +432,3 @@ export const shareItems = async (items: { title: string; src: string }[]) => {
     alert(text);
   }
 };
-
