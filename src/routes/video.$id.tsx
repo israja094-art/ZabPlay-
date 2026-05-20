@@ -21,12 +21,17 @@ function VideoPage() {
 
   useEffect(() => {
     setMounted(true);
+    // Mark as watched in history
+    if (current) {
+        localStorage.setItem(`history_${current.src}`, "watched");
+    }
+
     const onDoc = (e: MouseEvent) => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpenMenu(null);
     };
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
-  }, []);
+  }, [current]);
 
   if (!mounted) return <div className="min-h-screen bg-background" />;
   if (!current) return null;
@@ -180,4 +185,3 @@ function VideoPage() {
     </div>
   );
 }
-
