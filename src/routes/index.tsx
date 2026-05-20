@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useRef, useState, useEffect } from "react";
-import { CheckCircle2, Circle, FolderPlus, Share2, Trash2, X, History } from "lucide-react";
+import { CheckCircle2, Circle, FolderPlus, Share2, Trash2, X } from "lucide-react";
 import { BottomTabs } from "@/components/BottomTabs";
 import { SearchBar } from "@/components/SearchBar";
 import { Logo } from "@/components/Logo";
@@ -29,83 +29,221 @@ function Index() {
   const [q, setQ] = useState("");
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [history, setHistory] = useState<any[]>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Load history from localStorage
-    const savedHistory = videos.filter(v => localStorage.getItem(`history_${v.src}`));
-    setHistory(savedHistory);
-
     const triggerFirstScan = async () => {
       try {
+        console.log("App mounted: Dispatching non-blocking storage bridge authorization...");
         await runNativeScan(true);
       } catch (err) {
-        console.warn(err);
+        console.warn("Deferred permission bridge route bypass executed", err);
       }
     };
-    const timer = setTimeout(() => void triggerFirstScan(), 150);
+    
+    const timer = setTimeout(() => {
+      void triggerFirstScan();
+    }, 150);
+
     return () => clearTimeout(timer);
-  }, [videos]);
+  }, []);
 
   const list = videos.filter((v) => v.title.toLowerCase().includes(q.toLowerCase()));
 
-  const clearHistory = () => {
-    if (confirm("Clear all watch history?")) {
-      videos.forEach(v => localStorage.removeItem(`history_${v.src}`));
-      setHistory([]);
+  const toggle = (id: string) => {
+    setSelected((s) => {
+      const n = new Set(s);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  };
+
+  const enterSelect = (id: string) => {
+    setSelectMode(true);
+    setSelected(new Set([id]));
+  };
+
+  const exitSelect = () => {
+    setSelectMode(false);
+    setSelected(new Set());
+  };
+
+  const onDelete = () => {
+    if (selected.size === 0) return;
+    if (confirm(`Delete ${selected.size} video(s)?`)) {
+      deleteVideos([...selected]);
+      exitSelect();
     }
   };
 
+  const onShare = () => {
+    const items = videos.filter((v) => selected.has(v.id)).map((v) => ({ title: v.title, src: v.src }));
+    if (items.length === 0) return;
+    shareItems(items);
+  };
+
+  const allSelected = list.length > 0 && list.every((v) => selected.has(v.id));
+
   return (
     <div className="min-h-screen bg-background mx-auto max-w-md pb-20">
-      <input ref={fileRef} type="file" accept="video/*" multiple className="hidden" onChange={(e) => { if (e.target.files) importVideoFiles(e.target.files); e.target.value = ""; }} />
+      <input
+        ref={fileRef}
+        type="file"
+        accept="video/*"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files) importVideoFiles(e.target.files);
+          e.target.value = "";
+        }}
+      />
 
-      <div className="px-4 pt-5 pb-3 sticky top-0 bg-background/95 backdrop-blur z-30 border-b border-border/50">
-        <div className="flex items-center justify-between mb-4">
-          <Logo />
-          <button onClick={() => fileRef.current?.click()} className="p-2 text-foreground/80"><FolderPlus className="h-5 w-5" /></button>
-        </div>
+      <div className="px-4 pt-5 pb-3 space-y-4 sticky top-0 bg-background/95 backdrop-blur z-30 border-b border-border/50">
+        {selectMode ? (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <button onClick={exitSelect} className="p-2 -ml-2" aria-label="Close">
+                <X className="h-5 w-5" />
+              </button>
+              <span className="text-base font-semibold">{selected.size} selected</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setSelected(allSelected ? new Set() : new Set(list.map((v) => v.id)))}
+                className="text-xs px-2 py-1 rounded-md bg-secondary"
+              >
+                {allSelected ? "Clear" : "All"}
+              </button>
+              <button onClick={onShare} className="p-2" aria-label="Share">
+                <Share2 className="h-5 w-5" />
+              </button>
+              <button onClick={onDelete} className="p-2 text-destructive" aria-label="Delete">
+                <Trash2 className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between">
+            <Logo />
+            <div className="flex items-center gap-1 -mr-2">
+              <button
+                onClick={() => fileRef.current?.click()}
+                className="p-2 text-foreground/80"
+                aria-label="Import from gallery"
+              >
+                <FolderPlus className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => {
+                  const items = videos.map((v) => ({ title: v.title, src: v.src }));
+                  shareItems(items.slice(0, 5));
+                }}
+                className="p-2 text-foreground/80"
+                aria-label="Share"
+              >
+                <Share2 className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setSelectMode(true)}
+                className="p-2 text-foreground/80"
+                aria-label="Select"
+              >
+                <CheckCircle2 className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        )}
         <SearchBar value={q} onChange={setQ} placeholder="Search videos..." />
       </div>
 
-      {/* Watch History Section */}
-      {history.length > 0 && !q && (
-        <div className="mt-4 px-4">
-          <div className="flex justify-between items-center mb-2">
-            <h2 className="text-sm font-bold flex items-center gap-2"><History className="h-4 w-4" /> Watch History</h2>
-            <button onClick={clearHistory} className="text-xs text-destructive">Clear</button>
-          </div>
-          <div className="flex gap-3 overflow-x-auto pb-4 snap-x">
-            {history.map((v) => (
-              <button key={v.id} onClick={() => navigate({ to: "/video/$id", params: { id: v.id } })} className="flex-shrink-0 w-32 snap-start">
-                <div className="h-20 w-32 rounded-lg overflow-hidden bg-secondary">
-                  <img src={v.thumb} className="h-full w-full object-cover" />
-                </div>
-                <p className="text-[10px] truncate mt-1">{v.title}</p>
-              </button>
-            ))}
-          </div>
+      {list.length === 0 ? (
+        <div className="px-6 py-16 text-center text-muted-foreground text-sm">
+          No videos yet. Tap{" "}
+          <FolderPlus className="inline h-4 w-4 align-text-bottom" /> to add from your gallery.
         </div>
+      ) : (
+        <ul className="px-3 pt-3 space-y-2">
+          {list.map((v) => (
+            <VideoRow
+              key={v.id}
+              video={v}
+              selectMode={selectMode}
+              selected={selected.has(v.id)}
+              onOpen={() => navigate({ to: "/video/$id", params: { id: v.id } })}
+              onToggle={() => toggle(v.id)}
+              onLongPress={() => enterSelect(v.id)}
+            />
+          ))}
+        </ul>
       )}
-
-      <ul className="px-3 pt-3 space-y-2">
-        {list.map((v) => (
-          <VideoRow key={v.id} video={v} onOpen={() => navigate({ to: "/video/$id", params: { id: v.id } })} />
-        ))}
-      </ul>
 
       <BottomTabs />
     </div>
   );
 }
 
-function VideoRow({ video, onOpen }: { video: any; onOpen: () => void }) {
+function VideoRow({
+  video,
+  selectMode,
+  selected,
+  onOpen,
+  onToggle,
+  onLongPress,
+}: {
+  video: { id: string; title: string; duration: string; thumb: string; src: string };
+  selectMode: boolean;
+  selected: boolean;
+  onOpen: () => void;
+  onToggle: () => void;
+  onLongPress: () => void;
+}) {
+  const { didTrigger, ...pressHandlers } = useLongPress(onLongPress, 450);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(`history_${video.src}`);
+    if (saved) {
+      // Yahan hum calculate kar rahe hain ki video ka kitna hissa dekha gaya hai
+      // Note: Duration string format (MM:SS) ko seconds mein convert karna hoga
+      const parts = video.duration.split(':').map(Number);
+      const totalSec = parts.length === 2 ? parts[0] * 60 + parts[1] : 0;
+      if (totalSec > 0) {
+        const p = (parseFloat(saved) / totalSec) * 100;
+        setProgress(Math.min(p, 100));
+      }
+    }
+  }, [video.src, video.duration]);
+
   return (
     <li>
-      <button onClick={onOpen} className="w-full flex gap-3 items-center p-2 rounded-xl text-left active:bg-secondary">
-        <div className="relative h-20 w-32 overflow-hidden rounded-lg bg-secondary flex-shrink-0">
-          <img src={video.thumb} className="h-full w-full object-cover" />
+      <button
+        {...pressHandlers}
+        onClick={() => {
+          if (didTrigger()) return;
+          if (selectMode) onToggle();
+          else onOpen();
+        }}
+        className={`w-full flex gap-3 items-center p-2 rounded-xl text-left transition-colors ${
+          selected ? "bg-primary/15" : "active:bg-secondary"
+        }`}
+      >
+        {selectMode && (
+          <div className="flex-shrink-0">
+            {selected ? (
+              <CheckCircle2 className="h-5 w-5 text-primary" />
+            ) : (
+              <Circle className="h-5 w-5 text-muted-foreground" />
+            )}
+          </div>
+        )}
+        <div className="relative h-20 w-32 overflow-hidden rounded-lg border border-border/60 bg-secondary/70 flex-shrink-0">
+          <img src={video.thumb} alt={video.title} className="h-full w-full object-cover" loading="lazy" />
+          {progress > 5 && (
+            <div className="absolute bottom-0 left-0 w-full h-1 bg-white/20">
+              <div className="h-full bg-primary" style={{ width: `${progress}%` }} />
+            </div>
+          )}
           <div className="absolute inset-x-0 bottom-1 px-2 py-1 text-right">
             <span className="text-[10px] text-white font-medium bg-black/50 px-1 rounded">{video.duration}</span>
           </div>
@@ -117,4 +255,3 @@ function VideoRow({ video, onOpen }: { video: any; onOpen: () => void }) {
     </li>
   );
 }
-
