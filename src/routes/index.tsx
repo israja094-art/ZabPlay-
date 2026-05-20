@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useRef, useState, useEffect } from "react";
-import { CheckCircle2, Circle, FolderPlus, Share2, Trash2, X } from "lucide-react";
+import { CheckCircle2, Circle, FolderPlus, Share2, Trash2, X, Folder } from "lucide-react";
 import { BottomTabs } from "@/components/BottomTabs";
 import { SearchBar } from "@/components/SearchBar";
 import { Logo } from "@/components/Logo";
@@ -31,19 +31,21 @@ function Index() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // Naye feature ke liye states: Active tab aur selected folder tracking
+  const [activeTab, setActiveTab] = useState<"all" | "folders">("all");
+  const [currentFolder, setCurrentFolder] = useState<string | null>(null);
+
   // --- SCROLL POSITION FEATURE SHURU ---
   useEffect(() => {
-    // Jab user back aaye toh saved scroll position par wapas le jao
     const savedScrollY = sessionStorage.getItem("homepage_scroll_pos");
     if (savedScrollY) {
-      // Thoda sa timeout taaki videos list pehle render ho jaye
       const timer = setTimeout(() => {
         window.scrollTo(0, parseInt(savedScrollY, 10));
-        sessionStorage.removeItem("homepage_scroll_pos"); // Clear cache after restoring
+        sessionStorage.removeItem("homepage_scroll_pos");
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [videos, q]); // Videos load hone ya search hone par bhi sahi jagah scroll hoga
+  }, [videos, q, activeTab, currentFolder]);
   // --- SCROLL POSITION FEATURE KHATAM ---
 
   useEffect(() => {
@@ -63,7 +65,118 @@ function Index() {
     return () => clearTimeout(timer);
   }, []);
 
-  const list = videos.filter((v) => v.title.toLowerCase().includes(q.toLowerCase()));
+  // Videos filtering based on search query
+  const filteredVideos = videos.filter((v) => v.title.toLowerCase().includes(q.toLowerCase()));
+
+  // Folders logic: Video ke 'src' path se folder ka naam nikalna
+  const foldersMap: Record<string, typeof videos> = {};
+  filteredVideos.forEach((video) => {
+    let folderName = "Internal Storage";
+    if (video.src && video.src.includes("/")) {
+      const parts = video.src.split("/");
+      if (parts.length > 1) {
+        // File name se theek pehle waale folder ka naam nikalna
+        folderName = parts[parts.length - 2] || "Internal Storage";
+      }
+    }
+    // Kuch common standard names ko clean format mein dikhane ke liye
+    if (folderName.toLowerCase() === "0" || folderName === "") {
+      folderName = "Main Storage";
+    }
+    if (!foldersMap[folderName]) {
+      foldersMap[folderName] = [];
+    }
+    foldersMap[folderName].push(video);
+  });
+
+  // Final list jo screen par dikhegi (All videos, Folder view, ya Folder ke andar ki list)
+  let contentLayout;
+
+  if (activeTab === "all") {
+    contentLayout = (
+      <ul className="px-3 pt-3 space-y-2">
+        {filteredVideos.map((v) => (
+          <VideoRow
+            key={v.id}
+            video={v}
+            selectMode={selectMode}
+            selected={selected.has(v.id)}
+            onOpen={() => {
+              sessionStorage.setItem("homepage_scroll_pos", window.scrollY.toString());
+              navigate({ to: "/video/$id", params: { id: v.id } });
+            }}
+            onToggle={() => toggle(v.id)}
+            onLongPress={() => enterSelect(v.id)}
+          />
+        ))}
+      </ul>
+    );
+  } else {
+    // Folders Tab selected hai
+    if (currentFolder) {
+      // Kisi folder ke andar ki videos dikhana
+      const folderVideos = foldersMap[currentFolder] || [];
+      contentLayout = (
+        <div className="space-y-2">
+          <div className="px-4 py-2 flex items-center justify-between bg-secondary/30 border-b border-border/30">
+            <span className="text-sm font-semibold text-primary truncate">Folder: {currentFolder}</span>
+            <button 
+              onClick={() => setCurrentFolder(null)}
+              className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded-md font-medium"
+            >
+              Back to Folders
+            </button>
+          </div>
+          <ul className="px-3 pt-1 space-y-2">
+            {folderVideos.map((v) => (
+              <VideoRow
+                key={v.id}
+                video={v}
+                selectMode={selectMode}
+                selected={selected.has(v.id)}
+                onOpen={() => {
+                  sessionStorage.setItem("homepage_scroll_pos", window.scrollY.toString());
+                  navigate({ to: "/video/$id", params: { id: v.id } });
+                }}
+                onToggle={() => toggle(v.id)}
+                onLongPress={() => enterSelect(v.id)}
+              />
+            ))}
+          </ul>
+        </div>
+      );
+    } else {
+      // Saare folders ki beautiful grid/list list dikhana
+      const folderNames = Object.keys(foldersMap);
+      if (folderNames.length === 0) {
+        contentLayout = (
+          <div className="px-6 py-16 text-center text-muted-foreground text-sm">No folders found.</div>
+        );
+      } else {
+        contentLayout = (
+          <div className="px-4 pt-3 grid grid-cols-2 gap-3">
+            {folderNames.map((name) => (
+              <button
+                key={name}
+                onClick={() => setCurrentFolder(name)}
+                className="flex flex-col items-center justify-center p-4 rounded-xl border border-border/60 bg-secondary/20 active:bg-secondary/50 transition-all text-center gap-2"
+              >
+                <div className="relative p-3 bg-primary/10 rounded-xl text-primary">
+                  <Folder className="h-8 w-8 fill-primary/20" />
+                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-[10px] px-1.5 min-w-[18px] h-4 flex items-center justify-center rounded-full font-bold">
+                    {foldersMap[name].length}
+                  </span>
+                </div>
+                <span className="text-sm font-medium text-foreground line-clamp-1 w-full px-1">
+                  {name}
+                </span>
+              </button>
+            ))}
+          </div>
+        );
+      }
+    }
+  }
 
   const toggle = (id: string) => {
     setSelected((s) => {
@@ -98,7 +211,7 @@ function Index() {
     shareItems(items);
   };
 
-  const allSelected = list.length > 0 && list.every((v) => selected.has(v.id));
+  const allSelected = filteredVideos.length > 0 && filteredVideos.every((v) => selected.has(v.id));
 
   return (
     <div className="min-h-screen bg-background mx-auto max-w-md pb-20">
@@ -125,7 +238,7 @@ function Index() {
             </div>
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setSelected(allSelected ? new Set() : new Set(list.map((v) => v.id)))}
+                onClick={() => setSelected(allSelected ? new Set() : new Set(filteredVideos.map((v) => v.id)))}
                 className="text-xs px-2 py-1 rounded-md bg-secondary"
               >
                 {allSelected ? "Clear" : "All"}
@@ -170,31 +283,45 @@ function Index() {
           </div>
         )}
         <SearchBar value={q} onChange={setQ} placeholder="Search videos..." />
+
+        {/* --- DUB TAB SYSTEM DESIGN SHURU --- */}
+        {!selectMode && (
+          <div className="flex bg-secondary/40 p-1 rounded-xl w-full border border-border/30">
+            <button
+              onClick={() => {
+                setActiveTab("all");
+                setCurrentFolder(null);
+              }}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all text-center ${
+                activeTab === "all"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              All Videos
+            </button>
+            <button
+              onClick={() => setActiveTab("folders")}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all text-center ${
+                activeTab === "folders"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Folders
+            </button>
+          </div>
+        )}
+        {/* --- DUB TAB SYSTEM DESIGN KHATAM --- */}
       </div>
 
-      {list.length === 0 ? (
+      {filteredVideos.length === 0 ? (
         <div className="px-6 py-16 text-center text-muted-foreground text-sm">
           No videos yet. Tap{" "}
           <FolderPlus className="inline h-4 w-4 align-text-bottom" /> to add from your gallery.
         </div>
       ) : (
-        <ul className="px-3 pt-3 space-y-2">
-          {list.map((v) => (
-            <VideoRow
-              key={v.id}
-              video={v}
-              selectMode={selectMode}
-              selected={selected.has(v.id)}
-              onOpen={() => {
-                // Video open karne se pehle current scroll position ko save karo
-                sessionStorage.setItem("homepage_scroll_pos", window.scrollY.toString());
-                navigate({ to: "/video/$id", params: { id: v.id } });
-              }}
-              onToggle={() => toggle(v.id)}
-              onLongPress={() => enterSelect(v.id)}
-            />
-          ))}
-        </ul>
+        contentLayout
       )}
 
       <BottomTabs />
@@ -272,4 +399,3 @@ function VideoRow({
     </li>
   );
 }
-
