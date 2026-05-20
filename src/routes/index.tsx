@@ -17,7 +17,8 @@ import {
   Scissors,
   Edit3,
   HardDrive,
-  Music
+  Music,
+  Settings2
 } from "lucide-react";
 import { BottomTabs } from "@/components/BottomTabs";
 import { Logo } from "@/components/Logo";
@@ -338,7 +339,7 @@ function Index() {
             </button>
           </div>
         ) : (
-          /* NORMAL MODE HEADER (Plus icon removed, Three-dots menu dropdown fully functional) */
+          /* NORMAL MODE HEADER (Three-dots menu with Settings included) */
           <div className="space-y-3">
             <div className="flex items-center justify-between h-10">
               <Logo />
@@ -355,13 +356,13 @@ function Index() {
                 {/* Custom Lamba Teen Dot Icon Button */}
                 <button
                   onClick={(e) => {
-                    e.stopPropagation(); // window click event block karne ke liye
+                    e.stopPropagation();
                     setShowMenuDropdown(!showMenuDropdown);
                   }}
                   className={`p-2 rounded-full transition-colors ${showMenuDropdown ? "bg-secondary text-primary" : "text-foreground/80 active:bg-secondary"}`}
                   aria-label="More options"
                 >
-                  <MoreVertical className="h-5 w-5 font-bold scale-y-110" /> {/* scale-y-110 se dot thode aur lambe design mein lagenge */}
+                  <MoreVertical className="h-5 w-5 font-bold scale-y-110" />
                 </button>
 
                 {/* 👑 THREE-DOT PREMIUM OPTIONS DROPDOWN MENU BLOCK */}
@@ -396,6 +397,12 @@ function Index() {
                     <button onClick={() => handleDropdownAction("MP3 Converter")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
                       <Music className="h-4 w-4 text-primary" />
                       <span className="font-medium">MP3 Converter</span>
+                    </button>
+
+                    {/* 👑 6. Settings Option Added */}
+                    <button onClick={() => handleDropdownAction("Settings")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left border-t border-border/40 mt-1 pt-2">
+                      <Settings2 className="h-4 w-4 text-primary" />
+                      <span className="font-medium">Settings</span>
                     </button>
 
                   </div>
