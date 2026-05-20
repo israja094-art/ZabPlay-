@@ -76,6 +76,9 @@ export function VideoPlayer({
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTapRef = useRef<{ t: number; x: number } | null>(null);
   const pinchRef = useRef<{ distance: number; startZoom: number } | null>(null);
+  
+  // Throttle timer jo heavy history updates ko control karega
+  const lastHistoryUpdateRef = useRef<number>(0);
 
   // Khas current video details track karne ke liye template tool
   const currentVideoData = videos.find(v => v.src === src || v.id === src || src.includes(v.id.replace("nv-", "")));
@@ -143,6 +146,7 @@ export function VideoPlayer({
     setZoom(1);
     setIsSwipingActive(false);
     setIsLocked(false);
+    lastHistoryUpdateRef.current = 0; // Reset timer on change
     const v = videoRef.current;
     if (!v) return;
     
@@ -162,7 +166,6 @@ export function VideoPlayer({
         }
       }
     } catch {
-      // Purana single storage model fallback
       const oldSaved = localStorage.getItem(`history_${src}`);
       if (oldSaved) savedTime = parseFloat(oldSaved);
     }
@@ -183,35 +186,37 @@ export function VideoPlayer({
     if (!v) return;
     
     const onTime = () => {
-      setCurrent(v.currentTime);
-      localStorage.setItem(`history_${src}`, v.currentTime.toString());
+      const currentTimeVal = v.currentTime;
+      setCurrent(currentTimeVal);
+
+      const now = Date.now();
+      // Har 1000ms (1 second) se pehle local storage ko tang nahi karega code!
+      if (now - lastHistoryUpdateRef.current < 1000) return;
+      lastHistoryUpdateRef.current = now;
+
+      localStorage.setItem(`history_${src}`, currentTimeVal.toString());
 
       // 👑 --- STRUCTURED WATCHING HISTORY BUILDER CORE --- 👑
       if (currentVideoData && v.duration > 0) {
         try {
-          const pctCalculated = (v.currentTime / v.duration) * 100;
+          const pctCalculated = (currentTimeVal / v.duration) * 100;
           const currentDurationStr = formatTime(v.duration);
           
           const raw = localStorage.getItem("zabplay_watching_history");
           let historyList: HistoryItem[] = raw ? JSON.parse(raw) : [];
           
-          // Agar yeh video pehle se list mein hai toh use nikalenge taaki update karke top par la sakein
           historyList = historyList.filter(h => h.id !== currentVideoData.id);
           
-          // Naya updated object structure jo index.tsx use karega slider chalane ke liye
           const updatedItem: HistoryItem = {
             id: currentVideoData.id,
             title: currentVideoData.title,
             thumb: currentVideoData.thumb,
             duration: currentDurationStr,
             progress: Math.min(Math.max(pctCalculated, 0), 100),
-            lastPlayed: Date.now()
+            lastPlayed: now
           };
           
-          // Sabse upar push karo line mein
           historyList.unshift(updatedItem);
-          
-          // Limit history up to top 20 items taaki app heavy na ho
           if (historyList.length > 20) historyList.pop();
           
           localStorage.setItem("zabplay_watching_history", JSON.stringify(historyList));
@@ -227,7 +232,6 @@ export function VideoPlayer({
       setPlaying(false);
       localStorage.removeItem(`history_${src}`);
       
-      // Video poori khatam hone par watching list se safe cleanup karega taaki repeat videos disturb na karein
       if (currentVideoData) {
         try {
           const raw = localStorage.getItem("zabplay_watching_history");
