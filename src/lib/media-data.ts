@@ -4,6 +4,7 @@ export type Video = {
   duration: string;
   thumb: string;
   src: string;
+  progress?: number; // Ye naya field hai history track karne ke liye
 };
 
 export type Song = {
@@ -25,3 +26,4 @@ export const formatTime = (sec: number) => {
   const s = Math.floor(sec % 60);
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 };
+
