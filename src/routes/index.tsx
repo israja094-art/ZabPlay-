@@ -268,9 +268,11 @@ function Index() {
     }
   };
 
-  // 🔥 REAL SHARE FUNCTION
+  // 🔥 REAL SHARE FUNCTION (FIXED: Added id parameter so real mp4 file shares instead of text)
   const onShare = () => {
-    const items = videos.filter((v) => selected.has(v.id)).map((v) => ({ title: v.title, src: v.src }));
+    const items = videos
+      .filter((v) => selected.has(v.id))
+      .map((v) => ({ id: v.id, title: v.title, src: v.src }));
     if (items.length === 0) return;
     shareItems(items);
     exitSelect();
