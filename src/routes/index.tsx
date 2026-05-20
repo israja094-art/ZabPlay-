@@ -1,8 +1,24 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useRef, useState, useEffect } from "react";
-import { CheckCircle2, Circle, FolderPlus, Share2, Trash2, X, Folder, History } from "lucide-react";
+import {
+  CheckCircle2,
+  Circle,
+  FolderPlus,
+  Share2,
+  Trash2,
+  X,
+  Folder,
+  History,
+  Search,
+  MoreVertical,
+  Square,
+  CheckSquare,
+  Lock,
+  ArrowRightLeft,
+  Scissors,
+  Edit3
+} from "lucide-react";
 import { BottomTabs } from "@/components/BottomTabs";
-import { SearchBar } from "@/components/SearchBar";
 import { Logo } from "@/components/Logo";
 import { useLongPress } from "@/hooks/use-long-press";
 import { runNativeScan } from "@/lib/native-scanner";
@@ -23,13 +39,12 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-// Type Definition for History Items
 type HistoryItem = {
   id: string;
   title: string;
   thumb: string;
   duration: string;
-  progress: number; // percentage (0-100)
+  progress: number;
   lastPlayed: number;
 };
 
@@ -37,28 +52,23 @@ function Index() {
   const { videos } = useMediaStore();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
+  const [showSearchInput, setShowSearchInput] = useState(false); // Search input toggle karne ke liye state
   const [selectMode, setSelectMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Active tab aur selected folder tracking
   const [activeTab, setActiveTab] = useState<"all" | "folders">("all");
   const [currentFolder, setCurrentFolder] = useState<string | null>(null);
   
-  // Naya state watching history store karne ke liye
   const [watchingHistory, setWatchingHistory] = useState<HistoryItem[]>([]);
 
-  // --- WATCHING HISTORY LOAD CORES ---
   useEffect(() => {
     const loadHistory = () => {
       try {
         const raw = localStorage.getItem("zabplay_watching_history");
         if (raw) {
           const parsed: HistoryItem[] = JSON.parse(raw);
-          // Sirf unhi videos ko dikhayenge jo abhi mediaStore mein exist karti hain (deleted na ho)
           const validHistory = parsed.filter(h => videos.some(v => v.id === h.id));
-          
-          // Last played ke basis par sort karenge taaki jo abhi dekha wo sabse pehle aaye
           validHistory.sort((a, b) => b.lastPlayed - a.lastPlayed);
           setWatchingHistory(validHistory);
         }
@@ -68,10 +78,8 @@ function Index() {
     };
 
     loadHistory();
-    // Jab bhi videos change hon ya tab switch ho, history update ho jaye
   }, [videos, activeTab]);
 
-  // --- SCROLL POSITION FEATURE SHURU ---
   useEffect(() => {
     const savedScrollY = sessionStorage.getItem("homepage_scroll_pos");
     if (savedScrollY) {
@@ -82,7 +90,6 @@ function Index() {
       return () => clearTimeout(timer);
     }
   }, [videos, q, activeTab, currentFolder]);
-  // --- SCROLL POSITION FEATURE KHATAM ---
 
   useEffect(() => {
     const triggerFirstScan = async () => {
@@ -101,10 +108,8 @@ function Index() {
     return () => clearTimeout(timer);
   }, []);
 
-  // Videos filtering based on search query
   const filteredVideos = videos.filter((v) => v.title.toLowerCase().includes(q.toLowerCase()));
 
-  // Folders logic: Video ke 'src' path se folder ka naam nikalna
   const foldersMap: Record<string, typeof videos> = {};
   filteredVideos.forEach((video) => {
     let folderName = "Internal Storage";
@@ -123,7 +128,6 @@ function Index() {
     foldersMap[folderName].push(video);
   });
 
-  // Final list jo screen par dikhegi (All videos, Folder view, ya Folder ke andar ki list)
   let contentLayout;
 
   if (activeTab === "all") {
@@ -189,7 +193,10 @@ function Index() {
             {folderNames.map((name) => (
               <button
                 key={name}
-                onClick={() => setCurrentFolder(name)}
+                onClick={() => {
+                  if (selectMode) return; // Select mode mein folder khulega nahi
+                  setCurrentFolder(name);
+                }}
                 className="flex flex-col items-center justify-center p-4 rounded-xl border border-border/60 bg-secondary/20 active:bg-secondary/50 transition-all text-center gap-2"
               >
                 <div className="relative p-3 bg-primary/10 rounded-xl text-primary">
@@ -242,10 +249,47 @@ function Index() {
     shareItems(items);
   };
 
-  const allSelected = filteredVideos.length > 0 && filteredVideos.every((v) => selected.has(v.id));
+  // Naye feature placeholders (Aapke bataye mutabik icons ke functions)
+  const onPrivacySecure = () => {
+    if (selected.size === 0) return;
+    alert(`Moving ${selected.size} video(s) to Privacy Folder Securely.`);
+    exitSelect();
+  };
+
+  const onFileTransfer = () => {
+    if (selected.size === 0) return;
+    alert(`Transferring ${selected.size} video file(s)...`);
+    exitSelect();
+  };
+
+  const onVideoCut = () => {
+    if (selected.size === 0) return;
+    alert("Opening Video Cutter tool for selected file.");
+    exitSelect();
+  };
+
+  const onRename = () => {
+    if (selected.size === 0) return;
+    alert("Opening Rename dialog for the selected video.");
+    exitSelect();
+  };
+
+  const currentTabVideos = activeTab === "all" 
+    ? filteredVideos 
+    : (currentFolder ? foldersMap[currentFolder] || [] : filteredVideos);
+
+  const allSelected = currentTabVideos.length > 0 && currentTabVideos.every((v) => selected.has(v.id));
+
+  const handleSelectAllToggle = () => {
+    if (allSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(currentTabVideos.map((v) => v.id)));
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-background mx-auto max-w-md pb-20">
+    <div className="min-h-screen bg-background mx-auto max-w-md pb-32">
       <input
         ref={fileRef}
         type="file"
@@ -258,64 +302,81 @@ function Index() {
         }}
       />
 
+      {/* --- STICKY TOP HEADER ZONE --- */}
       <div className="px-4 pt-5 pb-3 space-y-4 sticky top-0 bg-background/95 backdrop-blur z-30 border-b border-border/50">
         {selectMode ? (
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <button onClick={exitSelect} className="p-2 -ml-2" aria-label="Close">
-                <X className="h-5 w-5" />
+          /* 👑 SELECT MODE ACTIVATED HEADER (Aapke photo aur description ke mutabik box aur numbers) */
+          <div className="flex items-center justify-between h-10 animate-fadeIn">
+            <div className="flex items-center gap-3">
+              <button onClick={handleSelectAllToggle} className="text-primary active:scale-90 transition-transform" aria-label="Select All Toggle">
+                {allSelected ? (
+                  <CheckSquare className="h-6 w-6 fill-primary/10" />
+                ) : (
+                  <Square className="h-6 w-6 text-muted-foreground" />
+                )}
               </button>
-              <span className="text-base font-semibold">{selected.size} selected</span>
+              <span className="text-base font-semibold text-foreground">
+                {selected.size} / {currentTabVideos.length} Selected
+              </span>
             </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setSelected(allSelected ? new Set() : new Set(filteredVideos.map((v) => v.id)))}
-                className="text-xs px-2 py-1 rounded-md bg-secondary"
-              >
-                {allSelected ? "Clear" : "All"}
-              </button>
-              <button onClick={onShare} className="p-2" aria-label="Share">
-                <Share2 className="h-5 w-5" />
-              </button>
-              <button onClick={onDelete} className="p-2 text-destructive" aria-label="Delete">
-                <Trash2 className="h-5 w-5" />
-              </button>
-            </div>
+            <button onClick={exitSelect} className="p-2 rounded-full bg-secondary/50 text-foreground active:scale-90 transition-transform">
+              <X className="h-5 w-5" />
+            </button>
           </div>
         ) : (
-          <div className="flex items-center justify-between">
-            <Logo />
-            <div className="flex items-center gap-1 -mr-2">
-              <button
-                onClick={() => fileRef.current?.click()}
-                className="p-2 text-foreground/80"
-                aria-label="Import from gallery"
-              >
-                <FolderPlus className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => {
-                  const items = videos.map((v) => ({ title: v.title, src: v.src }));
-                  shareItems(items.slice(0, 5));
-                }}
-                className="p-2 text-foreground/80"
-                aria-label="Share"
-              >
-                <Share2 className="h-5 w-5" />
-              </button>
-              <button
-                onClick={() => setSelectMode(true)}
-                className="p-2 text-foreground/80"
-                aria-label="Select"
-              >
-                <CheckCircle2 className="h-5 w-5" />
-              </button>
+          /* 👑 NORMAL MODE HEADER (Chhota Search Bar, Custom Layout Icons aur Three-Dots Menu) */
+          <div className="space-y-3">
+            <div className="flex items-center justify-between h-10">
+              <Logo />
+              <div className="flex items-center gap-1">
+                {/* Search icon trigger button */}
+                <button
+                  onClick={() => setShowSearchInput(!showSearchInput)}
+                  className={`p-2 rounded-full transition-colors ${showSearchInput ? "bg-primary/20 text-primary" : "text-foreground/80 active:bg-secondary"}`}
+                  aria-label="Toggle search input"
+                >
+                  <Search className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => fileRef.current?.click()}
+                  className="p-2 text-foreground/80 active:bg-secondary rounded-full"
+                  aria-label="Import from gallery"
+                >
+                  <FolderPlus className="h-5 w-5" />
+                </button>
+                {/* Stylish Design ke liye custom Three-Dots (Teen Lambe Dot) Menu */}
+                <button
+                  onClick={() => alert("Settings & Sorting Options Menu")}
+                  className="p-2 text-foreground/80 active:bg-secondary rounded-full ml-0.5"
+                  aria-label="More options"
+                >
+                  <MoreVertical className="h-5 w-5 text-foreground/90 font-bold" />
+                </button>
+              </div>
             </div>
+
+            {/* Chhota input box jo icon click karne par hi khulega */}
+            {showSearchInput && (
+              <div className="relative animate-slideDown w-full">
+                <input
+                  type="text"
+                  value={q}
+                  onChange={(e) => setQ(e.target.value)}
+                  placeholder="Search videos..."
+                  className="w-full bg-secondary/50 text-sm text-foreground placeholder:text-muted-foreground pl-4 pr-10 py-2 rounded-xl border border-border/40 focus:outline-none focus:border-primary/50 transition-all"
+                  autoFocus
+                />
+                {q && (
+                  <button onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
-        <SearchBar value={q} onChange={setQ} placeholder="Search videos..." />
 
-        {/* --- DUB TAB SYSTEM DESIGN SHURU --- */}
+        {/* --- TAB SYSTEM SYSTEM DESIGN --- */}
         {!selectMode && (
           <div className="flex bg-secondary/40 p-1 rounded-xl w-full border border-border/30">
             <button
@@ -343,10 +404,9 @@ function Index() {
             </button>
           </div>
         )}
-        {/* --- DUB TAB SYSTEM DESIGN KHATAM --- */}
       </div>
 
-      {/* 👑 --- WATCHING HISTORY HORIZONTAL SLIDER BLOCK SHURU --- 👑 */}
+      {/* --- WATCHING HISTORY HORIZONTAL SLIDER BLOCK --- */}
       {!selectMode && watchingHistory.length > 0 && !currentFolder && (
         <div className="mt-2 mb-4 border-b border-border/20 pb-4">
           <div className="px-4 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -370,7 +430,6 @@ function Index() {
                     className="h-full w-full object-cover"
                     loading="lazy"
                   />
-                  {/* Real-time Video Watching Progress Line */}
                   <div className="absolute bottom-0 left-0 w-full h-1 bg-black/40">
                     <div 
                       className="h-full bg-red-500 transition-all duration-300" 
@@ -391,8 +450,8 @@ function Index() {
           </div>
         </div>
       )}
-      {/* 👑 --- WATCHING HISTORY HORIZONTAL SLIDER BLOCK KHATAM --- 👑 */}
 
+      {/* --- MAIN CONTENT DISPLAY AREA --- */}
       {filteredVideos.length === 0 ? (
         <div className="px-6 py-16 text-center text-muted-foreground text-sm">
           No videos yet. Tap{" "}
@@ -402,7 +461,53 @@ function Index() {
         contentLayout
       )}
 
-      <BottomTabs />
+      {/* 👑 BOTTOM ACTION BAR PATTI (Long Press Selection Mode par auto-pop hoga niche se) */}
+      {selectMode && (
+        <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-md bg-background/95 border-t border-border/60 backdrop-blur-md shadow-2xl z-50 animate-slideUp">
+          <div className="flex items-center justify-around py-3 px-2">
+            
+            {/* 1. Share Icon */}
+            <button onClick={onShare} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
+              <Share2 className="h-5 w-5 mb-1" />
+              <span className="text-[10px] font-medium text-foreground/80">Share</span>
+            </button>
+
+            {/* 2. Privacy Folder Lock Icon */}
+            <button onClick={onPrivacySecure} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
+              <Lock className="h-5 w-5 mb-1" />
+              <span className="text-[10px] font-medium text-foreground/80">Privacy</span>
+            </button>
+
+            {/* 3. Delete Icon */}
+            <button onClick={onDelete} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-destructive disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
+              <Trash2 className="h-5 w-5 mb-1" />
+              <span className="text-[10px] font-medium text-foreground/80">Delete</span>
+            </button>
+
+            {/* 4. File Transfer Icon */}
+            <button onClick={onFileTransfer} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
+              <ArrowRightLeft className="h-5 w-5 mb-1" />
+              <span className="text-[10px] font-medium text-foreground/80">Transfer</span>
+            </button>
+
+            {/* 5. Video Cut/Trim Icon */}
+            <button onClick={onVideoCut} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
+              <Scissors className="h-5 w-5 mb-1" />
+              <span className="text-[10px] font-medium text-foreground/80">Cut Video</span>
+            </button>
+
+            {/* 6. Rename Icon */}
+            <button onClick={onRename} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
+              <Edit3 className="h-5 w-5 mb-1" />
+              <span className="text-[10px] font-medium text-foreground/80">Rename</span>
+            </button>
+
+          </div>
+        </div>
+      )}
+
+      {/* Normal tabs ko select mode mein chipa denge taaki niche ki patti clean dikhe */}
+      {!selectMode && <BottomTabs />}
     </div>
   );
 }
@@ -436,7 +541,6 @@ function VideoRow({
         }
       }
     } catch {
-      // Fallback to older model logic if storage gets raw conflict
       const saved = localStorage.getItem(`history_${video.src}`);
       if (saved) {
         const parts = video.duration.split(':').map(Number);
@@ -462,17 +566,20 @@ function VideoRow({
           selected ? "bg-primary/15" : "active:bg-secondary"
         }`}
       >
-        {selectMode && (
-          <div className="flex-shrink-0">
-            {selected ? (
-              <CheckCircle2 className="h-5 w-5 text-primary" />
-            ) : (
-              <Circle className="h-5 w-5 text-muted-foreground" />
-            )}
-          </div>
-        )}
         <div className="relative h-20 w-32 overflow-hidden rounded-lg border border-border/60 bg-secondary/70 flex-shrink-0">
           <img src={video.thumb} alt={video.title} className="h-full w-full object-cover" loading="lazy" />
+          
+          {/* Real-time multi-select state overlay checkbox inside image block */}
+          {selectMode && (
+            <div className="absolute top-1.5 left-1.5 bg-black/40 rounded-full p-0.5 backdrop-blur-sm z-10">
+              {selected ? (
+                <CheckCircle2 className="h-4 w-4 text-primary fill-background" />
+              ) : (
+                <Circle className="h-4 w-4 text-white/80" />
+              )}
+            </div>
+          )}
+
           {progress > 2 && (
             <div className="absolute bottom-0 left-0 w-full h-1 bg-white/20">
               <div className="h-full bg-red-500" style={{ width: `${progress}%` }} />
