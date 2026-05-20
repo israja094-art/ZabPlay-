@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useRef, useState, useEffect } from "react";
-import { CheckCircle2, Circle, FolderPlus, Share2, Trash2, X, Folder } from "lucide-react";
+import { CheckCircle2, Circle, FolderPlus, Share2, Trash2, X, Folder, History } from "lucide-react";
 import { BottomTabs } from "@/components/BottomTabs";
 import { SearchBar } from "@/components/SearchBar";
 import { Logo } from "@/components/Logo";
@@ -23,6 +23,16 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
+// Type Definition for History Items
+type HistoryItem = {
+  id: string;
+  title: string;
+  thumb: string;
+  duration: string;
+  progress: number; // percentage (0-100)
+  lastPlayed: number;
+};
+
 function Index() {
   const { videos } = useMediaStore();
   const navigate = useNavigate();
@@ -31,9 +41,35 @@ function Index() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // Naye feature ke liye states: Active tab aur selected folder tracking
+  // Active tab aur selected folder tracking
   const [activeTab, setActiveTab] = useState<"all" | "folders">("all");
   const [currentFolder, setCurrentFolder] = useState<string | null>(null);
+  
+  // Naya state watching history store karne ke liye
+  const [watchingHistory, setWatchingHistory] = useState<HistoryItem[]>([]);
+
+  // --- WATCHING HISTORY LOAD CORES ---
+  useEffect(() => {
+    const loadHistory = () => {
+      try {
+        const raw = localStorage.getItem("zabplay_watching_history");
+        if (raw) {
+          const parsed: HistoryItem[] = JSON.parse(raw);
+          // Sirf unhi videos ko dikhayenge jo abhi mediaStore mein exist karti hain (deleted na ho)
+          const validHistory = parsed.filter(h => videos.some(v => v.id === h.id));
+          
+          // Last played ke basis par sort karenge taaki jo abhi dekha wo sabse pehle aaye
+          validHistory.sort((a, b) => b.lastPlayed - a.lastPlayed);
+          setWatchingHistory(validHistory);
+        }
+      } catch (e) {
+        console.error("Error loading history:", e);
+      }
+    };
+
+    loadHistory();
+    // Jab bhi videos change hon ya tab switch ho, history update ho jaye
+  }, [videos, activeTab]);
 
   // --- SCROLL POSITION FEATURE SHURU ---
   useEffect(() => {
@@ -75,11 +111,9 @@ function Index() {
     if (video.src && video.src.includes("/")) {
       const parts = video.src.split("/");
       if (parts.length > 1) {
-        // File name se theek pehle waale folder ka naam nikalna
         folderName = parts[parts.length - 2] || "Internal Storage";
       }
     }
-    // Kuch common standard names ko clean format mein dikhane ke liye
     if (folderName.toLowerCase() === "0" || folderName === "") {
       folderName = "Main Storage";
     }
@@ -112,9 +146,7 @@ function Index() {
       </ul>
     );
   } else {
-    // Folders Tab selected hai
     if (currentFolder) {
-      // Kisi folder ke andar ki videos dikhana
       const folderVideos = foldersMap[currentFolder] || [];
       contentLayout = (
         <div className="space-y-2">
@@ -146,7 +178,6 @@ function Index() {
         </div>
       );
     } else {
-      // Saare folders ki beautiful grid/list list dikhana
       const folderNames = Object.keys(foldersMap);
       if (folderNames.length === 0) {
         contentLayout = (
@@ -315,6 +346,53 @@ function Index() {
         {/* --- DUB TAB SYSTEM DESIGN KHATAM --- */}
       </div>
 
+      {/* 👑 --- WATCHING HISTORY HORIZONTAL SLIDER BLOCK SHURU --- 👑 */}
+      {!selectMode && watchingHistory.length > 0 && !currentFolder && (
+        <div className="mt-2 mb-4 border-b border-border/20 pb-4">
+          <div className="px-4 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            <History className="h-3.5 w-3.5 text-primary" />
+            <span>Watching History</span>
+          </div>
+          <div className="flex gap-3 overflow-x-auto px-4 scrollbar-none snap-x">
+            {watchingHistory.map((item) => (
+              <button
+                key={`hist-${item.id}`}
+                onClick={() => {
+                  sessionStorage.setItem("homepage_scroll_pos", window.scrollY.toString());
+                  navigate({ to: "/video/$id", params: { id: item.id } });
+                }}
+                className="w-32 flex-shrink-0 text-left snap-start space-y-1.5 group active:opacity-70 transition-opacity"
+              >
+                <div className="relative h-20 w-32 overflow-hidden rounded-lg border border-border/50 bg-secondary/60">
+                  <img
+                    src={item.thumb}
+                    alt={item.title}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                  />
+                  {/* Real-time Video Watching Progress Line */}
+                  <div className="absolute bottom-0 left-0 w-full h-1 bg-black/40">
+                    <div 
+                      className="h-full bg-red-500 transition-all duration-300" 
+                      style={{ width: `${item.progress}%` }} 
+                    />
+                  </div>
+                  <div className="absolute inset-x-0 bottom-1.5 px-2 py-0.5 text-right">
+                    <span className="text-[9px] text-white font-medium bg-black/60 px-1 rounded">
+                      {item.duration}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs font-medium text-foreground line-clamp-1 group-hover:text-primary transition-colors">
+                  {item.title}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {/* 👑 --- WATCHING HISTORY HORIZONTAL SLIDER BLOCK KHATAM --- 👑 */}
+
       {filteredVideos.length === 0 ? (
         <div className="px-6 py-16 text-center text-muted-foreground text-sm">
           No videos yet. Tap{" "}
@@ -348,16 +426,28 @@ function VideoRow({
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
-    const saved = localStorage.getItem(`history_${video.src}`);
-    if (saved) {
-      const parts = video.duration.split(':').map(Number);
-      const totalSec = parts.length === 2 ? parts[0] * 60 + parts[1] : 0;
-      if (totalSec > 0) {
-        const p = (parseFloat(saved) / totalSec) * 100;
-        setProgress(Math.min(p, 100));
+    try {
+      const raw = localStorage.getItem("zabplay_watching_history");
+      if (raw) {
+        const parsed: HistoryItem[] = JSON.parse(raw);
+        const currentItem = parsed.find(h => h.id === video.id);
+        if (currentItem) {
+          setProgress(currentItem.progress);
+        }
+      }
+    } catch {
+      // Fallback to older model logic if storage gets raw conflict
+      const saved = localStorage.getItem(`history_${video.src}`);
+      if (saved) {
+        const parts = video.duration.split(':').map(Number);
+        const totalSec = parts.length === 2 ? parts[0] * 60 + parts[1] : 0;
+        if (totalSec > 0) {
+          const p = (parseFloat(saved) / totalSec) * 100;
+          setProgress(Math.min(p, 100));
+        }
       }
     }
-  }, [video.src, video.duration]);
+  }, [video.id, video.src, video.duration]);
 
   return (
     <li>
@@ -383,9 +473,9 @@ function VideoRow({
         )}
         <div className="relative h-20 w-32 overflow-hidden rounded-lg border border-border/60 bg-secondary/70 flex-shrink-0">
           <img src={video.thumb} alt={video.title} className="h-full w-full object-cover" loading="lazy" />
-          {progress > 5 && (
+          {progress > 2 && (
             <div className="absolute bottom-0 left-0 w-full h-1 bg-white/20">
-              <div className="h-full bg-primary" style={{ width: `${progress}%` }} />
+              <div className="h-full bg-red-500" style={{ width: `${progress}%` }} />
             </div>
           )}
           <div className="absolute inset-x-0 bottom-1 px-2 py-1 text-right">
@@ -399,3 +489,4 @@ function VideoRow({
     </li>
   );
 }
+
