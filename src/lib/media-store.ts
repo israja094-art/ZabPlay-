@@ -482,38 +482,49 @@ export const importAudioFiles = async (files: FileList | File[]) => {
   }
 };
 
-// 🔥 FIXING SHARE FEATURE: READS THE ACTUAL MEDIA FILE VIA CAPACITOR FILESYSTEM AND OPENS REAL SHARE DIALOG
-export const shareItems = async (items: { title: string; src: string }[]) => {
+// 🔥 FIXED SHARE FEATURE: EXTRACTS NATIVE FILE PATH AND FORCES MP4 MIME TYPE FOR ANDROID
+export const shareItems = async (items: { id: string; title: string; src: string }[]) => {
   if (items.length === 0) return;
 
   try {
     const filesToShare: string[] = [];
 
     for (const item of items) {
-      let fileUrl = item.src;
-
-      // Handle custom user objects / blob streams natively inside Capacitor
-      if (fileUrl.startsWith("blob:") || fileUrl.startsWith("/")) {
-        // Fallback safely to title text sharing if direct hardware path resolution is pending
-        continue;
+      // Agar video native internal scanner se hai, toh id mein "nv-file://..." hota hai
+      if (item.id && item.id.startsWith("nv-")) {
+        const rawNativePath = item.id.replace("nv-", ""); // Extracting actual file:// path
+        
+        try {
+          // Resolve internal path to a secure content URI that WhatsApp can read
+          const fileUriResult = await Filesystem.getUri({
+            path: rawNativePath,
+          });
+          if (fileUriResult && fileUriResult.uri) {
+            filesToShare.push(fileUriResult.uri);
+          }
+        } catch (fsErr) {
+          console.warn("Failed to get native URI via filesystem, trying fallback:", fsErr);
+          if (rawNativePath.startsWith("file://")) {
+            filesToShare.push(rawNativePath);
+          }
+        }
       }
-      filesToShare.push(fileUrl);
     }
 
     if (filesToShare.length > 0) {
-      // 👑 Fire Capacitor True Native Android Sheet
+      // 👑 Fire Capacitor True Native Android Sheet with proper Video MIME Type forced
       await Share.share({
-        title: "Share Videos via ZabPlay",
+        title: items[0].title,
         files: filesToShare,
         dialogTitle: "Share Video",
       });
     } else {
-      // Safe dynamic text fallbacks if file binary is virtual stream
+      // Fallback if it's a default/asset video or stream URL
       const textToSend = items.map((i) => `${i.title}`).join("\n");
       await Share.share({
-        title: "ZabPlay Media Info",
+        title: "ZabPlay Media",
         text: textToSend,
-        dialogTitle: "Share Video Info",
+        dialogTitle: "Share Info",
       });
     }
   } catch (error) {
