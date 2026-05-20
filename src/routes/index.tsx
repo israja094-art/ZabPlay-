@@ -3,7 +3,6 @@ import { useRef, useState, useEffect } from "react";
 import {
   CheckCircle2,
   Circle,
-  FolderPlus,
   Share2,
   Trash2,
   X,
@@ -16,7 +15,9 @@ import {
   Lock,
   ArrowRightLeft,
   Scissors,
-  Edit3
+  Edit3,
+  HardDrive,
+  Music
 } from "lucide-react";
 import { BottomTabs } from "@/components/BottomTabs";
 import { Logo } from "@/components/Logo";
@@ -52,8 +53,9 @@ function Index() {
   const { videos } = useMediaStore();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
-  const [showSearchInput, setShowSearchInput] = useState(false); // Search input toggle karne ke liye state
+  const [showSearchInput, setShowSearchInput] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
+  const [showMenuDropdown, setShowMenuDropdown] = useState(false); // Three-dots dropdown ke liye state
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -107,6 +109,14 @@ function Index() {
 
     return () => clearTimeout(timer);
   }, []);
+
+  // Dropdown menu ko baahar click karne par band karne ka logic
+  useEffect(() => {
+    if (!showMenuDropdown) return;
+    const closeMenu = () => setShowMenuDropdown(false);
+    window.addEventListener("click", closeMenu);
+    return () => window.removeEventListener("click", closeMenu);
+  }, [showMenuDropdown]);
 
   const filteredVideos = videos.filter((v) => v.title.toLowerCase().includes(q.toLowerCase()));
 
@@ -194,7 +204,7 @@ function Index() {
               <button
                 key={name}
                 onClick={() => {
-                  if (selectMode) return; // Select mode mein folder khulega nahi
+                  if (selectMode) return;
                   setCurrentFolder(name);
                 }}
                 className="flex flex-col items-center justify-center p-4 rounded-xl border border-border/60 bg-secondary/20 active:bg-secondary/50 transition-all text-center gap-2"
@@ -249,7 +259,6 @@ function Index() {
     shareItems(items);
   };
 
-  // Naye feature placeholders (Aapke bataye mutabik icons ke functions)
   const onPrivacySecure = () => {
     if (selected.size === 0) return;
     alert(`Moving ${selected.size} video(s) to Privacy Folder Securely.`);
@@ -272,6 +281,11 @@ function Index() {
     if (selected.size === 0) return;
     alert("Opening Rename dialog for the selected video.");
     exitSelect();
+  };
+
+  // --- 👑 THREE-DOT MENU ACTIONS ---
+  const handleDropdownAction = (actionName: string) => {
+    alert(`Opening feature: ${actionName}`);
   };
 
   const currentTabVideos = activeTab === "all" 
@@ -305,7 +319,7 @@ function Index() {
       {/* --- STICKY TOP HEADER ZONE --- */}
       <div className="px-4 pt-5 pb-3 space-y-4 sticky top-0 bg-background/95 backdrop-blur z-30 border-b border-border/50">
         {selectMode ? (
-          /* 👑 SELECT MODE ACTIVATED HEADER (Aapke photo aur description ke mutabik box aur numbers) */
+          /* SELECT MODE ACTIVATED HEADER */
           <div className="flex items-center justify-between h-10 animate-fadeIn">
             <div className="flex items-center gap-3">
               <button onClick={handleSelectAllToggle} className="text-primary active:scale-90 transition-transform" aria-label="Select All Toggle">
@@ -324,12 +338,12 @@ function Index() {
             </button>
           </div>
         ) : (
-          /* 👑 NORMAL MODE HEADER (Chhota Search Bar, Custom Layout Icons aur Three-Dots Menu) */
+          /* NORMAL MODE HEADER (Plus icon removed, Three-dots menu dropdown fully functional) */
           <div className="space-y-3">
             <div className="flex items-center justify-between h-10">
               <Logo />
-              <div className="flex items-center gap-1">
-                {/* Search icon trigger button */}
+              <div className="flex items-center gap-1 relative">
+                {/* Search Icon */}
                 <button
                   onClick={() => setShowSearchInput(!showSearchInput)}
                   className={`p-2 rounded-full transition-colors ${showSearchInput ? "bg-primary/20 text-primary" : "text-foreground/80 active:bg-secondary"}`}
@@ -337,25 +351,59 @@ function Index() {
                 >
                   <Search className="h-5 w-5" />
                 </button>
+
+                {/* Custom Lamba Teen Dot Icon Button */}
                 <button
-                  onClick={() => fileRef.current?.click()}
-                  className="p-2 text-foreground/80 active:bg-secondary rounded-full"
-                  aria-label="Import from gallery"
-                >
-                  <FolderPlus className="h-5 w-5" />
-                </button>
-                {/* Stylish Design ke liye custom Three-Dots (Teen Lambe Dot) Menu */}
-                <button
-                  onClick={() => alert("Settings & Sorting Options Menu")}
-                  className="p-2 text-foreground/80 active:bg-secondary rounded-full ml-0.5"
+                  onClick={(e) => {
+                    e.stopPropagation(); // window click event block karne ke liye
+                    setShowMenuDropdown(!showMenuDropdown);
+                  }}
+                  className={`p-2 rounded-full transition-colors ${showMenuDropdown ? "bg-secondary text-primary" : "text-foreground/80 active:bg-secondary"}`}
                   aria-label="More options"
                 >
-                  <MoreVertical className="h-5 w-5 text-foreground/90 font-bold" />
+                  <MoreVertical className="h-5 w-5 font-bold scale-y-110" /> {/* scale-y-110 se dot thode aur lambe design mein lagenge */}
                 </button>
+
+                {/* 👑 THREE-DOT PREMIUM OPTIONS DROPDOWN MENU BLOCK */}
+                {showMenuDropdown && (
+                  <div className="absolute right-0 top-12 w-52 bg-background/95 border border-border/80 rounded-2xl shadow-2xl z-50 py-2 animate-scaleUp backdrop-blur-md">
+                    
+                    {/* 1. File Transfer */}
+                    <button onClick={() => handleDropdownAction("File Transfer")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
+                      <ArrowRightLeft className="h-4 w-4 text-primary" />
+                      <span className="font-medium">File Transfer</span>
+                    </button>
+
+                    {/* 2. Storage Info */}
+                    <button onClick={() => handleDropdownAction("Storage Info")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
+                      <HardDrive className="h-4 w-4 text-primary" />
+                      <span className="font-medium">Storage Info</span>
+                    </button>
+
+                    {/* 3. Privacy Folder */}
+                    <button onClick={() => handleDropdownAction("Privacy Folder")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
+                      <Lock className="h-4 w-4 text-primary" />
+                      <span className="font-medium">Privacy Folder</span>
+                    </button>
+
+                    {/* 4. History */}
+                    <button onClick={() => handleDropdownAction("History")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
+                      <History className="h-4 w-4 text-primary" />
+                      <span className="font-medium">History</span>
+                    </button>
+
+                    {/* 5. MP3 Converter */}
+                    <button onClick={() => handleDropdownAction("MP3 Converter")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
+                      <Music className="h-4 w-4 text-primary" />
+                      <span className="font-medium">MP3 Converter</span>
+                    </button>
+
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Chhota input box jo icon click karne par hi khulega */}
+            {/* Collapsible Search Input Area */}
             {showSearchInput && (
               <div className="relative animate-slideDown w-full">
                 <input
@@ -376,7 +424,7 @@ function Index() {
           </div>
         )}
 
-        {/* --- TAB SYSTEM SYSTEM DESIGN --- */}
+        {/* --- TAB SYSTEM DESIGN --- */}
         {!selectMode && (
           <div className="flex bg-secondary/40 p-1 rounded-xl w-full border border-border/30">
             <button
@@ -454,49 +502,42 @@ function Index() {
       {/* --- MAIN CONTENT DISPLAY AREA --- */}
       {filteredVideos.length === 0 ? (
         <div className="px-6 py-16 text-center text-muted-foreground text-sm">
-          No videos yet. Tap{" "}
-          <FolderPlus className="inline h-4 w-4 align-text-bottom" /> to add from your gallery.
+          No videos yet. Drop videos into your storage to start playing.
         </div>
       ) : (
         contentLayout
       )}
 
-      {/* 👑 BOTTOM ACTION BAR PATTI (Long Press Selection Mode par auto-pop hoga niche se) */}
+      {/* BOTTOM ACTION BAR PATTI */}
       {selectMode && (
         <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-md bg-background/95 border-t border-border/60 backdrop-blur-md shadow-2xl z-50 animate-slideUp">
           <div className="flex items-center justify-around py-3 px-2">
             
-            {/* 1. Share Icon */}
             <button onClick={onShare} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Share2 className="h-5 w-5 mb-1" />
               <span className="text-[10px] font-medium text-foreground/80">Share</span>
             </button>
 
-            {/* 2. Privacy Folder Lock Icon */}
             <button onClick={onPrivacySecure} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Lock className="h-5 w-5 mb-1" />
               <span className="text-[10px] font-medium text-foreground/80">Privacy</span>
             </button>
 
-            {/* 3. Delete Icon */}
             <button onClick={onDelete} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-destructive disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Trash2 className="h-5 w-5 mb-1" />
               <span className="text-[10px] font-medium text-foreground/80">Delete</span>
             </button>
 
-            {/* 4. File Transfer Icon */}
             <button onClick={onFileTransfer} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <ArrowRightLeft className="h-5 w-5 mb-1" />
               <span className="text-[10px] font-medium text-foreground/80">Transfer</span>
             </button>
 
-            {/* 5. Video Cut/Trim Icon */}
             <button onClick={onVideoCut} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Scissors className="h-5 w-5 mb-1" />
               <span className="text-[10px] font-medium text-foreground/80">Cut Video</span>
             </button>
 
-            {/* 6. Rename Icon */}
             <button onClick={onRename} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Edit3 className="h-5 w-5 mb-1" />
               <span className="text-[10px] font-medium text-foreground/80">Rename</span>
@@ -506,7 +547,6 @@ function Index() {
         </div>
       )}
 
-      {/* Normal tabs ko select mode mein chipa denge taaki niche ki patti clean dikhe */}
       {!selectMode && <BottomTabs />}
     </div>
   );
@@ -569,7 +609,7 @@ function VideoRow({
         <div className="relative h-20 w-32 overflow-hidden rounded-lg border border-border/60 bg-secondary/70 flex-shrink-0">
           <img src={video.thumb} alt={video.title} className="h-full w-full object-cover" loading="lazy" />
           
-          {/* Real-time multi-select state overlay checkbox inside image block */}
+          {/* Checkbox overlay when selectMode is active */}
           {selectMode && (
             <div className="absolute top-1.5 left-1.5 bg-black/40 rounded-full p-0.5 backdrop-blur-sm z-10">
               {selected ? (
@@ -596,4 +636,3 @@ function VideoRow({
     </li>
   );
 }
-
