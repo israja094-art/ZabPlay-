@@ -15,12 +15,22 @@ import {
   Unlock,
 } from "lucide-react";
 import { formatTime } from "@/lib/media-data";
+import { useMediaStore } from "@/lib/media-store";
 
 const SPEEDS = [0.5, 1, 1.25, 1.5, 2];
 
 type VideoEl = HTMLVideoElement & {
   webkitEnterFullscreen?: () => void;
   webkitDisplayingFullscreen?: boolean;
+};
+
+type HistoryItem = {
+  id: string;
+  title: string;
+  thumb: string;
+  duration: string;
+  progress: number;
+  lastPlayed: number;
 };
 
 export function VideoPlayer({
@@ -38,6 +48,7 @@ export function VideoPlayer({
   onGestureStateChange?: (swiping: boolean) => void;
   onControlsVisibilityChange?: (visible: boolean) => void;
 }) {
+  const { videos } = useMediaStore();
   const wrapRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -65,6 +76,9 @@ export function VideoPlayer({
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTapRef = useRef<{ t: number; x: number } | null>(null);
   const pinchRef = useRef<{ distance: number; startZoom: number } | null>(null);
+
+  // Khas current video details track karne ke liye template tool
+  const currentVideoData = videos.find(v => v.src === src || v.id === src || src.includes(v.id.replace("nv-", "")));
 
   const flashOverlay = useCallback((text: string, ms = 900) => {
     setOverlay(text);
@@ -132,16 +146,33 @@ export function VideoPlayer({
     const v = videoRef.current;
     if (!v) return;
     
-    // Load history
-    const savedTime = localStorage.getItem(`history_${src}`);
-    if (savedTime) v.currentTime = parseFloat(savedTime);
-    else v.currentTime = 0;
-    
+    // Naye Array logic se pre-saved accurate progress dhundhna aur resume karna
+    let savedTime = 0;
+    try {
+      const raw = localStorage.getItem("zabplay_watching_history");
+      if (raw && currentVideoData) {
+        const parsed: HistoryItem[] = JSON.parse(raw);
+        const match = parsed.find(h => h.id === currentVideoData.id);
+        if (match) {
+          const parts = match.duration.split(':').map(Number);
+          const totalSec = parts.length === 2 ? parts[0] * 60 + parts[1] : 0;
+          if (totalSec > 0) {
+            savedTime = (match.progress / 100) * totalSec;
+          }
+        }
+      }
+    } catch {
+      // Purana single storage model fallback
+      const oldSaved = localStorage.getItem(`history_${src}`);
+      if (oldSaved) savedTime = parseFloat(oldSaved);
+    }
+
+    v.currentTime = savedTime;
     v.playbackRate = 1;
     v.muted = false;
     v.volume = 1;
     v.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
-  }, [src]);
+  }, [src, currentVideoData]);
 
   useEffect(() => {
     if (videoRef.current) videoRef.current.loop = looping;
@@ -150,16 +181,67 @@ export function VideoPlayer({
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
+    
     const onTime = () => {
       setCurrent(v.currentTime);
       localStorage.setItem(`history_${src}`, v.currentTime.toString());
+
+      // 👑 --- STRUCTURED WATCHING HISTORY BUILDER CORE --- 👑
+      if (currentVideoData && v.duration > 0) {
+        try {
+          const pctCalculated = (v.currentTime / v.duration) * 100;
+          const currentDurationStr = formatTime(v.duration);
+          
+          const raw = localStorage.getItem("zabplay_watching_history");
+          let historyList: HistoryItem[] = raw ? JSON.parse(raw) : [];
+          
+          // Agar yeh video pehle se list mein hai toh use nikalenge taaki update karke top par la sakein
+          historyList = historyList.filter(h => h.id !== currentVideoData.id);
+          
+          // Naya updated object structure jo index.tsx use karega slider chalane ke liye
+          const updatedItem: HistoryItem = {
+            id: currentVideoData.id,
+            title: currentVideoData.title,
+            thumb: currentVideoData.thumb,
+            duration: currentDurationStr,
+            progress: Math.min(Math.max(pctCalculated, 0), 100),
+            lastPlayed: Date.now()
+          };
+          
+          // Sabse upar push karo line mein
+          historyList.unshift(updatedItem);
+          
+          // Limit history up to top 20 items taaki app heavy na ho
+          if (historyList.length > 20) historyList.pop();
+          
+          localStorage.setItem("zabplay_watching_history", JSON.stringify(historyList));
+        } catch (err) {
+          console.error("Failed writing complex storage history matrix", err);
+        }
+      }
     };
+
     const onMeta = () => setDuration(v.duration);
+    
     const onEnd = () => {
       setPlaying(false);
       localStorage.removeItem(`history_${src}`);
+      
+      // Video poori khatam hone par watching list se safe cleanup karega taaki repeat videos disturb na karein
+      if (currentVideoData) {
+        try {
+          const raw = localStorage.getItem("zabplay_watching_history");
+          if (raw) {
+            let historyList: HistoryItem[] = JSON.parse(raw);
+            historyList = historyList.filter(h => h.id !== currentVideoData.id);
+            localStorage.setItem("zabplay_watching_history", JSON.stringify(historyList));
+          }
+        } catch {}
+      }
+
       if (!looping) onEnded?.();
     };
+
     v.addEventListener("timeupdate", onTime);
     v.addEventListener("loadedmetadata", onMeta);
     v.addEventListener("ended", onEnd);
@@ -168,7 +250,7 @@ export function VideoPlayer({
       v.removeEventListener("loadedmetadata", onMeta);
       v.removeEventListener("ended", onEnd);
     };
-  }, [looping, onEnded, src]);
+  }, [looping, onEnded, src, currentVideoData]);
 
   const ensureAudioGraph = useCallback(() => {
     const v = videoRef.current;
@@ -366,7 +448,6 @@ export function VideoPlayer({
         onVolumeChange={() => { if (videoRef.current) { setMuted(videoRef.current.muted); setVolume(videoRef.current.volume); } }}
       />
       
-      {/* (Rest of the JSX remains exactly same as you provided) */}
       <div className={`absolute left-3 top-1/2 -translate-y-1/2 z-50 transition-opacity duration-200 ${showControls ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"}`} onClick={stopBubble} onTouchStart={stopBubble} onTouchEnd={stopBubble}>
         <button onClick={() => { setIsLocked(!isLocked); reveal(); }} className="bg-black/60 text-primary p-3 rounded-full border border-primary/20 backdrop-blur-sm active:scale-90 transition-transform" aria-label={isLocked ? "Unlock interface" : "Lock interface"}>
           {isLocked ? <Lock className="h-5 w-5 text-destructive animate-pulse" /> : <Unlock className="h-5 w-5" />}
@@ -424,3 +505,4 @@ export function VideoPlayer({
     </div>
   );
 }
+
