@@ -77,11 +77,16 @@ export function VideoPlayer({
   const lastTapRef = useRef<{ t: number; x: number } | null>(null);
   const pinchRef = useRef<{ distance: number; startZoom: number } | null>(null);
   
-  // Throttle timer jo heavy history updates ko control karega
   const lastHistoryUpdateRef = useRef<number>(0);
 
   // Khas current video details track karne ke liye template tool
   const currentVideoData = videos.find(v => v.src === src || v.id === src || src.includes(v.id.replace("nv-", "")));
+
+  // 👑 FIXED: currentVideoData ko ref mein store kiya taaki iski wajah se player baar-baar re-render ya reset na ho
+  const currentVideoDataRef = useRef(currentVideoData);
+  useEffect(() => {
+    currentVideoDataRef.current = currentVideoData;
+  }, [currentVideoData]);
 
   const flashOverlay = useCallback((text: string, ms = 900) => {
     setOverlay(text);
@@ -134,6 +139,7 @@ export function VideoPlayer({
     };
   }, [expanded]);
 
+  // 👑 FIXED: dependency array se currentVideoData ko hataya taaki video chaltiyen loop na mare
   useEffect(() => {
     setPlaying(false);
     setCurrent(0);
@@ -146,17 +152,18 @@ export function VideoPlayer({
     setZoom(1);
     setIsSwipingActive(false);
     setIsLocked(false);
-    lastHistoryUpdateRef.current = 0; // Reset timer on change
+    lastHistoryUpdateRef.current = 0; 
     const v = videoRef.current;
     if (!v) return;
     
-    // Naye Array logic se pre-saved accurate progress dhundhna aur resume karna
     let savedTime = 0;
+    const activeVideo = currentVideoDataRef.current;
+
     try {
       const raw = localStorage.getItem("zabplay_watching_history");
-      if (raw && currentVideoData) {
+      if (raw && activeVideo) {
         const parsed: HistoryItem[] = JSON.parse(raw);
-        const match = parsed.find(h => h.id === currentVideoData.id);
+        const match = parsed.find(h => h.id === activeVideo.id);
         if (match) {
           const parts = match.duration.split(':').map(Number);
           const totalSec = parts.length === 2 ? parts[0] * 60 + parts[1] : 0;
@@ -175,7 +182,7 @@ export function VideoPlayer({
     v.muted = false;
     v.volume = 1;
     v.play().then(() => setPlaying(true)).catch(() => setPlaying(false));
-  }, [src, currentVideoData]);
+  }, [src]); // <-- Khali src par chalega, isliye naye video par hi reset hoga!
 
   useEffect(() => {
     if (videoRef.current) videoRef.current.loop = looping;
@@ -190,14 +197,13 @@ export function VideoPlayer({
       setCurrent(currentTimeVal);
 
       const now = Date.now();
-      // Har 1000ms (1 second) se pehle local storage ko tang nahi karega code!
       if (now - lastHistoryUpdateRef.current < 1000) return;
       lastHistoryUpdateRef.current = now;
 
       localStorage.setItem(`history_${src}`, currentTimeVal.toString());
 
-      // 👑 --- STRUCTURED WATCHING HISTORY BUILDER CORE --- 👑
-      if (currentVideoData && v.duration > 0) {
+      const activeVideo = currentVideoDataRef.current;
+      if (activeVideo && v.duration > 0) {
         try {
           const pctCalculated = (currentTimeVal / v.duration) * 100;
           const currentDurationStr = formatTime(v.duration);
@@ -205,12 +211,12 @@ export function VideoPlayer({
           const raw = localStorage.getItem("zabplay_watching_history");
           let historyList: HistoryItem[] = raw ? JSON.parse(raw) : [];
           
-          historyList = historyList.filter(h => h.id !== currentVideoData.id);
+          historyList = historyList.filter(h => h.id !== activeVideo.id);
           
           const updatedItem: HistoryItem = {
-            id: currentVideoData.id,
-            title: currentVideoData.title,
-            thumb: currentVideoData.thumb,
+            id: activeVideo.id,
+            title: activeVideo.title,
+            thumb: activeVideo.thumb,
             duration: currentDurationStr,
             progress: Math.min(Math.max(pctCalculated, 0), 100),
             lastPlayed: now
@@ -232,12 +238,13 @@ export function VideoPlayer({
       setPlaying(false);
       localStorage.removeItem(`history_${src}`);
       
-      if (currentVideoData) {
+      const activeVideo = currentVideoDataRef.current;
+      if (activeVideo) {
         try {
           const raw = localStorage.getItem("zabplay_watching_history");
           if (raw) {
             let historyList: HistoryItem[] = JSON.parse(raw);
-            historyList = historyList.filter(h => h.id !== currentVideoData.id);
+            historyList = historyList.filter(h => h.id !== activeVideo.id);
             localStorage.setItem("zabplay_watching_history", JSON.stringify(historyList));
           }
         } catch {}
@@ -254,7 +261,7 @@ export function VideoPlayer({
       v.removeEventListener("loadedmetadata", onMeta);
       v.removeEventListener("ended", onEnd);
     };
-  }, [looping, onEnded, src, currentVideoData]);
+  }, [looping, onEnded, src]);
 
   const ensureAudioGraph = useCallback(() => {
     const v = videoRef.current;
