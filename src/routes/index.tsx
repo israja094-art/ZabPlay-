@@ -31,6 +31,21 @@ function Index() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // --- SCROLL POSITION FEATURE SHURU ---
+  useEffect(() => {
+    // Jab user back aaye toh saved scroll position par wapas le jao
+    const savedScrollY = sessionStorage.getItem("homepage_scroll_pos");
+    if (savedScrollY) {
+      // Thoda sa timeout taaki videos list pehle render ho jaye
+      const timer = setTimeout(() => {
+        window.scrollTo(0, parseInt(savedScrollY, 10));
+        sessionStorage.removeItem("homepage_scroll_pos"); // Clear cache after restoring
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [videos, q]); // Videos load hone ya search hone par bhi sahi jagah scroll hoga
+  // --- SCROLL POSITION FEATURE KHATAM ---
+
   useEffect(() => {
     const triggerFirstScan = async () => {
       try {
@@ -170,7 +185,11 @@ function Index() {
               video={v}
               selectMode={selectMode}
               selected={selected.has(v.id)}
-              onOpen={() => navigate({ to: "/video/$id", params: { id: v.id } })}
+              onOpen={() => {
+                // Video open karne se pehle current scroll position ko save karo
+                sessionStorage.setItem("homepage_scroll_pos", window.scrollY.toString());
+                navigate({ to: "/video/$id", params: { id: v.id } });
+              }}
               onToggle={() => toggle(v.id)}
               onLongPress={() => enterSelect(v.id)}
             />
@@ -204,8 +223,6 @@ function VideoRow({
   useEffect(() => {
     const saved = localStorage.getItem(`history_${video.src}`);
     if (saved) {
-      // Yahan hum calculate kar rahe hain ki video ka kitna hissa dekha gaya hai
-      // Note: Duration string format (MM:SS) ko seconds mein convert karna hoga
       const parts = video.duration.split(':').map(Number);
       const totalSec = parts.length === 2 ? parts[0] * 60 + parts[1] : 0;
       if (totalSec > 0) {
@@ -255,3 +272,4 @@ function VideoRow({
     </li>
   );
 }
+
