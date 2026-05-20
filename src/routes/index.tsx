@@ -31,7 +31,6 @@ function Index() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // 🌟 Safe Timeout Execution Loop Core Framework
   useEffect(() => {
     const triggerFirstScan = async () => {
       try {
@@ -42,7 +41,6 @@ function Index() {
       }
     };
     
-    // 150ms ka safe gap taaki UI frame lock na ho aur pop-up seedhe handle ho sake
     const timer = setTimeout(() => {
       void triggerFirstScan();
     }, 150);
@@ -193,7 +191,7 @@ function VideoRow({
   onToggle,
   onLongPress,
 }: {
-  video: { id: string; title: string; duration: string; thumb: string };
+  video: { id: string; title: string; duration: string; thumb: string; src: string };
   selectMode: boolean;
   selected: boolean;
   onOpen: () => void;
@@ -201,6 +199,22 @@ function VideoRow({
   onLongPress: () => void;
 }) {
   const { didTrigger, ...pressHandlers } = useLongPress(onLongPress, 450);
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    const saved = localStorage.getItem(`history_${video.src}`);
+    if (saved) {
+      // Yahan hum calculate kar rahe hain ki video ka kitna hissa dekha gaya hai
+      // Note: Duration string format (MM:SS) ko seconds mein convert karna hoga
+      const parts = video.duration.split(':').map(Number);
+      const totalSec = parts.length === 2 ? parts[0] * 60 + parts[1] : 0;
+      if (totalSec > 0) {
+        const p = (parseFloat(saved) / totalSec) * 100;
+        setProgress(Math.min(p, 100));
+      }
+    }
+  }, [video.src, video.duration]);
+
   return (
     <li>
       <button
@@ -225,8 +239,13 @@ function VideoRow({
         )}
         <div className="relative h-20 w-32 overflow-hidden rounded-lg border border-border/60 bg-secondary/70 flex-shrink-0">
           <img src={video.thumb} alt={video.title} className="h-full w-full object-cover" loading="lazy" />
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/90 to-transparent px-2 py-1 text-right">
-            <span className="text-[10px] text-foreground">{video.duration}</span>
+          {progress > 5 && (
+            <div className="absolute bottom-0 left-0 w-full h-1 bg-white/20">
+              <div className="h-full bg-primary" style={{ width: `${progress}%` }} />
+            </div>
+          )}
+          <div className="absolute inset-x-0 bottom-1 px-2 py-1 text-right">
+            <span className="text-[10px] text-white font-medium bg-black/50 px-1 rounded">{video.duration}</span>
           </div>
         </div>
         <div className="flex-1 min-w-0">
@@ -236,5 +255,3 @@ function VideoRow({
     </li>
   );
 }
-
-void Link;
