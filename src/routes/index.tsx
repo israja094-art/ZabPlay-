@@ -282,13 +282,11 @@ function Index() {
     setSelected(new Set());
   };
 
-  // 🔥 REAL FIX: ASYNC EXECUTION FOR REAL-TIME NATIVE STORAGE REMOVAL
+  // 🔥 REAL NATIVE STORAGE REMOVAL: REMOVED WEB INTERRUPTIONS FOR PHYSICAL DELETION
   const onDelete = async () => {
     if (selected.size === 0) return;
-    if (confirm(`Delete ${selected.size} video(s)?`)) {
-      await deleteVideos([...selected]);
-      exitSelect();
-    }
+    await deleteVideos([...selected]);
+    exitSelect();
   };
 
   const onShare = () => {
