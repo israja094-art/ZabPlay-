@@ -282,10 +282,11 @@ function Index() {
     setSelected(new Set());
   };
 
-  const onDelete = () => {
+  // 🔥 REAL FIX: ASYNC EXECUTION FOR REAL-TIME NATIVE STORAGE REMOVAL
+  const onDelete = async () => {
     if (selected.size === 0) return;
     if (confirm(`Delete ${selected.size} video(s)?`)) {
-      deleteVideos([...selected]);
+      await deleteVideos([...selected]);
       exitSelect();
     }
   };
@@ -928,4 +929,4 @@ function VideoRow({
       </button>
     </li>
   );
-                   }
+}
