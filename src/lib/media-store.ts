@@ -8,7 +8,7 @@ import {
   wireAutoRescan,
 } from "./native-scanner";
 import { Share } from "@capacitor/share";
-import { Filesystem, Directory } from "@capacitor/filesystem";
+import { Filesystem } from "@capacitor/filesystem";
 
 type State = {
   videos: Video[];
@@ -36,6 +36,7 @@ type PersistedSong = {
 const LS_DELETED_V = "zabplay.deleted.videos";
 const LS_DELETED_S = "zabplay.deleted.songs";
 const LS_RENAMED_V = "zabplay.renamed.videos"; 
+const LS_PRIVACY_V = "zabplay.privacy.videos"; // New tracking key
 const DB_NAME = "zabplay-media-db";
 const DB_VERSION = 1;
 const VIDEO_STORE = "videos";
@@ -55,7 +56,7 @@ const fmtDuration = (sec: number) => {
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 };
 
-const loadDeleted = (key: string): Set<string> => {
+const loadSet = (key: string): Set<string> => {
   if (typeof window === "undefined") return new Set();
   try {
     return new Set(JSON.parse(localStorage.getItem(key) || "[]"));
@@ -64,7 +65,7 @@ const loadDeleted = (key: string): Set<string> => {
   }
 };
 
-const saveDeleted = (key: string, s: Set<string>) => {
+const saveSet = (key: string, s: Set<string>) => {
   if (typeof window === "undefined") return;
   localStorage.setItem(key, JSON.stringify([...s]));
 };
@@ -80,6 +81,7 @@ const loadRenamedMap = (): Record<string, string> => {
 
 let deletedV = new Set<string>();
 let deletedS = new Set<string>();
+let privacyV = new Set<string>(); // Tracker for hidden videos
 let renamedMap: Record<string, string> = {}; 
 let hydratedFromStorage = false;
 let mediaHydrated = false;
@@ -103,8 +105,9 @@ const computeState = (): State => {
     return cached ? { ...song, duration: cached.duration } : song;
   });
 
+  // Filter out deleted AND privacy hidden items
   const allVideos = [...nv, ...userVideos, ...defaultVideos].filter(
-    (v) => !deletedV.has(v.id)
+    (v) => !deletedV.has(v.id) && !privacyV.has(v.id)
   );
 
   return {
@@ -164,13 +167,12 @@ const probeNativeMediaBackground = async () => {
   isProbingBackground = false;
 };
 
-const openDb = (): Promise<IDBDatabase | null> =>
+export const openDb = (): Promise<IDBDatabase | null> =>
   new Promise((resolve) => {
     if (typeof window === "undefined" || !("indexedDB" in window)) {
       resolve(null);
       return;
     }
-
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = () => {
       const db = request.result;
@@ -256,8 +258,9 @@ const hydratePersistedMedia = async () => {
 const subscribe = (l: () => void) => {
   if (!hydratedFromStorage && typeof window !== "undefined") {
     hydratedFromStorage = true;
-    deletedV = loadDeleted(LS_DELETED_V);
-    deletedS = loadDeleted(LS_DELETED_S);
+    deletedV = loadSet(LS_DELETED_V);
+    deletedS = loadSet(LS_DELETED_S);
+    privacyV = loadSet(LS_PRIVACY_V);
     renamedMap = loadRenamedMap();
     queueMicrotask(() => emit());
     void hydratePersistedMedia();
@@ -296,7 +299,7 @@ export const deleteVideos = (ids: string[]) => {
       deletedV.add(id);
     }
   }
-  saveDeleted(LS_DELETED_V, deletedV);
+  saveSet(LS_DELETED_V, deletedV);
   emit();
 };
 
@@ -311,7 +314,7 @@ export const deleteSongs = (ids: string[]) => {
       deletedS.add(id);
     }
   }
-  saveDeleted(LS_DELETED_S, deletedS);
+  saveSet(LS_DELETED_S, deletedS);
   emit();
 };
 
@@ -330,6 +333,23 @@ export const renameVideoFile = async (id: string, newTitle: string) => {
       await putOne<PersistedVideo>(VIDEO_STORE, targetData);
     }
   }
+  emit();
+};
+
+// --- New Privacy Functions ---
+export const moveVideosToPrivacy = (ids: string[]) => {
+  for (const id of ids) {
+    privacyV.add(id);
+  }
+  saveSet(LS_PRIVACY_V, privacyV);
+  emit();
+};
+
+export const removeVideosFromPrivacy = (ids: string[]) => {
+  for (const id of ids) {
+    privacyV.delete(id);
+  }
+  saveSet(LS_PRIVACY_V, privacyV);
   emit();
 };
 
@@ -444,44 +464,27 @@ export const importAudioFiles = async (files: FileList | File[]) => {
 
 export const shareItems = async (items: { id: string; title: string; src: string }[]) => {
   if (items.length === 0) return;
-
   try {
     const filesToShare: string[] = [];
     for (const item of items) {
       if (item.id && item.id.startsWith("nv-")) {
         const rawNativePath = item.id.replace("nv-", "");
         try {
-          const fileUriResult = await Filesystem.getUri({
-            path: rawNativePath,
-          });
-          if (fileUriResult && fileUriResult.uri) {
-            filesToShare.push(fileUriResult.uri);
-          }
+          const fileUriResult = await Filesystem.getUri({ path: rawNativePath });
+          if (fileUriResult && fileUriResult.uri) filesToShare.push(fileUriResult.uri);
         } catch (fsErr) {
           console.warn("Failed to get native URI:", fsErr);
-          if (rawNativePath.startsWith("file://")) {
-            filesToShare.push(rawNativePath);
-          }
+          if (rawNativePath.startsWith("file://")) filesToShare.push(rawNativePath);
         }
       }
     }
-
     if (filesToShare.length > 0) {
-      await Share.share({
-        title: items[0].title,
-        files: filesToShare,
-        dialogTitle: "Share Video",
-      });
+      await Share.share({ title: items[0].title, files: filesToShare, dialogTitle: "Share Video" });
     } else {
       const textToSend = items.map((i) => `${i.title}`).join("\n");
-      await Share.share({
-        title: "ZabPlay Media",
-        text: textToSend,
-        dialogTitle: "Share Info",
-      });
+      await Share.share({ title: "ZabPlay Media", text: textToSend, dialogTitle: "Share Info" });
     }
   } catch (error) {
     console.error("Error while handling capacitor native sharing:", error);
   }
 };
-
