@@ -369,36 +369,61 @@ function Index() {
     }
   };
 
-  const handlePinSubmit = async () => {
+  // 🔥 ADVANCED PROFESSIONAL NON-BLOCKING PIN ENGINE
+  const handlePinSubmit = () => {
     if (inputPin.length !== 4) {
       alert("Please enter a valid 4-digit PIN.");
       return;
     }
 
+    // 1. Keyboard ko sabse pehle niche bitha do taaki input lock na phase
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+
     if (pinMode === "setup") {
+      // Setup direct close bina spinner lagaye
       localStorage.setItem("zabplay_privacy_pin", inputPin);
       setSavedPin(inputPin);
-      alert("Privacy PIN successfully set!");
       setShowPinModal(false);
+      setTimeout(() => {
+        alert("Privacy PIN successfully set!");
+      }, 100);
+
     } else if (pinMode === "unlock_hide") {
       if (inputPin === savedPin) {
+        // Pehle modal gayab karo taaki UI freeze na lage
         setShowPinModal(false);
-        executePrivacyLock();
+        // Chupchaap next micro-task me file operation run karo
+        setTimeout(() => {
+          executePrivacyLock();
+        }, 150);
       } else {
         alert("Incorrect PIN! Please try again.");
         setInputPin("");
-        setTimeout(() => pinInputRef.current?.focus(), 50);
+        setTimeout(() => pinInputRef.current?.focus(), 100);
       }
+
     } else if (pinMode === "unlock_view") {
       if (inputPin === savedPin) {
+        // Modal turant band karo
         setShowPinModal(false);
-        const data = await getPrivacyVideos();
-        setPrivacyVideosList(data);
-        setShowPrivacyModal(true);
+        // Background non-blocking execution
+        setTimeout(async () => {
+          try {
+            const data = await getPrivacyVideos();
+            setPrivacyVideosList(data || []);
+            setShowPrivacyModal(true);
+          } catch (err) {
+            console.error("Native storage read crash protected:", err);
+            setPrivacyVideosList([]);
+            setShowPrivacyModal(true);
+          }
+        }, 150);
       } else {
         alert("Incorrect PIN! Please try again.");
         setInputPin("");
-        setTimeout(() => pinInputRef.current?.focus(), 50);
+        setTimeout(() => pinInputRef.current?.focus(), 100);
       }
     }
   };
@@ -664,7 +689,7 @@ function Index() {
               </div>
             </div>
 
-            {/* Premium Flat Buttons Layout (z-index and events handled perfectly) */}
+            {/* Premium Flat Buttons Layout */}
             <div className="flex gap-3 text-xs font-semibold pt-2 relative z-[99999] pointer-events-auto">
               <button 
                 type="button"
@@ -904,4 +929,3 @@ function VideoRow({
     </li>
   );
 }
-
