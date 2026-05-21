@@ -632,66 +632,85 @@ function Index() {
         contentLayout
       )}
 
-      {/* --- 🔐 REAL MODAL: PRIVACY PIN SETUP & UNLOCK ENGINE --- */}
+      {/* --- 🔐 FIXED REAL MODAL: PRIVACY PIN SETUP & UNLOCK ENGINE --- */}
       {showPinModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-background w-full max-w-xs rounded-2xl p-5 border border-border/80 shadow-2xl space-y-4 text-center">
+        <div 
+          className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-[9999]"
+          onClick={() => pinInputRef.current?.focus()}
+        >
+          <div 
+            className="bg-[#0b1220] w-full max-w-xs rounded-[28px] p-6 border border-white/10 shadow-2xl space-y-5 text-center relative"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
               <Lock className="h-6 w-6" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-foreground">
+              <h3 className="text-base font-bold text-white">
                 {pinMode === "setup" ? "Set Privacy Password" : "Enter Privacy PIN"}
               </h3>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-slate-400 mt-1">
                 {pinMode === "setup" 
                   ? "Create a 4-digit PIN to secure your hidden videos" 
-                  : "Please verification code to continue"}
+                  : "Please enter verification code to continue"}
               </p>
             </div>
             
-            {/* Real Hidden Input Engine for keyboard bridge */}
-            <input 
-              ref={pinInputRef}
-              type="text" 
-              maxLength={4}
-              pattern="[0-9]*"
-              inputMode="numeric"
-              value={inputPin}
-              onChange={(e) => setInputPin(e.target.value.replace(/\D/g, ""))}
-              className="absolute opacity-0 w-1 h-1 pointer-events-none"
-              autoFocus
-            />
+            {/* Real Hidden Input Layer - Placed on top of dots but transparent */}
+            <div className="relative w-full max-w-[200px] mx-auto h-14 mt-2">
+              <input 
+                ref={pinInputRef}
+                type="text" 
+                maxLength={4}
+                pattern="[0-9]*"
+                inputMode="numeric"
+                value={inputPin}
+                onChange={(e) => setInputPin(e.target.value.replace(/\D/g, ""))}
+                className="absolute inset-0 w-full h-full opacity-0 z-20 cursor-pointer text-center"
+                autoFocus
+              />
 
-            {/* Custom Interactive UI Grid Boxes that show typing dots live */}
-            <div 
-              onClick={() => pinInputRef.current?.focus()}
-              className="flex justify-center items-center gap-3 py-2 cursor-pointer"
-            >
-              {[0, 1, 2, 3].map((index) => (
-                <div 
-                  key={index} 
-                  className={`w-10 h-12 rounded-xl border flex items-center justify-center text-lg font-bold transition-all ${
-                    inputPin.length === index 
-                      ? "border-primary bg-primary/5 shadow-md" 
-                      : "border-border/60 bg-secondary/50"
-                  }`}
-                >
-                  {inputPin.length > index ? (
-                    <span className="text-foreground text-xl leading-none">●</span>
-                  ) : (
-                    <span className="text-muted-foreground/30 text-sm">○</span>
-                  )}
-                </div>
-              ))}
+              {/* Visual 4-Boxes UI Grid with live entry dots */}
+              <div className="absolute inset-0 flex justify-between items-center gap-3 z-10 pointer-events-none">
+                {[0, 1, 2, 3].map((index) => (
+                  <div 
+                    key={index} 
+                    className={`w-11 h-13 rounded-2xl border flex items-center justify-center text-lg font-bold transition-all ${
+                      inputPin.length === index 
+                        ? "border-primary bg-primary/10 shadow-lg scale-105" 
+                        : "border-white/10 bg-white/[0.03]"
+                    }`}
+                  >
+                    {inputPin.length > index ? (
+                      <span className="text-white text-xl leading-none">●</span>
+                    ) : (
+                      <span className="text-white/20 text-sm">○</span>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
 
-            <div className="flex gap-2 text-xs font-semibold pt-2">
-              <button onClick={() => setShowPinModal(false)} className="flex-1 py-2 rounded-xl bg-secondary text-foreground">Cancel</button>
+            {/* Bottom Buttons Fix for Event Trapping */}
+            <div className="flex gap-3 text-xs font-semibold pt-2 relative z-30">
               <button 
-                onClick={handlePinSubmit} 
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowPinModal(false);
+                }} 
+                className="flex-1 py-3 rounded-xl bg-white/[0.05] text-white active:bg-white/10 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePinSubmit();
+                }} 
                 disabled={inputPin.length !== 4}
-                className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground disabled:opacity-40"
+                className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-transform"
               >
                 Confirm
               </button>
@@ -922,3 +941,4 @@ function VideoRow({
     </li>
   );
 }
+
