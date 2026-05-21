@@ -12,7 +12,6 @@ import {
   MoreVertical,
   Square,
   CheckSquare,
-  Lock,
   ArrowRightLeft,
   Scissors,
   Edit3,
@@ -30,8 +29,6 @@ import {
   deleteVideos,
   shareItems,
   renameVideoFile,
-  moveVideosToPrivacy,
-  getPrivacyVideos,
 } from "@/lib/media-store";
 
 export const Route = createFileRoute("/")({
@@ -72,29 +69,8 @@ function Index() {
   const [renameTargetId, setRenameTargetId] = useState<string | null>(null);
   const [newTitleValue, setNewTitleValue] = useState("");
   
-  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
-  const [privacyVideosList, setPrivacyVideosList] = useState<any[]>([]);
-
   const [showStorageModal, setShowStorageModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
-
-  const [showPinModal, setShowPinModal] = useState(false);
-  const [pinMode, setPinMode] = useState<"setup" | "unlock_hide" | "unlock_view">("setup");
-  const [inputPin, setInputPin] = useState("");
-  const [savedPin, setSavedPin] = useState<string | null>(null);
-  
-  const pinInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const pin = localStorage.getItem("zabplay_privacy_pin");
-    if (pin) setSavedPin(pin);
-  }, []);
-
-  useEffect(() => {
-    if (showPinModal) {
-      setTimeout(() => pinInputRef.current?.focus(), 300);
-    }
-  }, [showPinModal]);
 
   useEffect(() => {
     const loadHistory = () => {
@@ -270,21 +246,6 @@ function Index() {
     exitSelect();
   };
 
-  const onPrivacySecure = () => {
-    if (selected.size === 0) return;
-    setInputPin("");
-    if (!savedPin) setPinMode("setup");
-    else setPinMode("unlock_hide");
-    setShowPinModal(true);
-  };
-
-  const executePrivacyLock = (ids: string[]) => {
-    moveVideosToPrivacy(ids);
-    deleteVideos(ids);
-    alert(`${ids.length} Video(s) successfully locked in Privacy Folder!`);
-    exitSelect();
-  };
-
   const onRename = () => {
     if (selected.size === 0) return;
     const firstId = Array.from(selected)[0];
@@ -327,62 +288,6 @@ function Index() {
       setShowStorageModal(true);
     } else if (actionName === "History") {
       setShowHistoryModal(true);
-    } else if (actionName === "Privacy Folder") {
-      setInputPin("");
-      if (!savedPin) setPinMode("setup");
-      else setPinMode("unlock_view");
-      setShowPinModal(true);
-    }
-  };
-
-  // ✅ FIXED: PIN submit — selectedIds ko snapshot liya taaki async delay mein bhi sahi rahe
-  const handlePinSubmit = () => {
-    if (inputPin.length !== 4) {
-      alert("Please enter a valid 4-digit PIN.");
-      return;
-    }
-
-    const currentSelectedIds = [...selected]; // snapshot
-
-    if (pinMode === "setup") {
-      localStorage.setItem("zabplay_privacy_pin", inputPin);
-      setSavedPin(inputPin);
-      setShowPinModal(false);
-      setTimeout(() => {
-        executePrivacyLock(currentSelectedIds);
-      }, 100);
-
-    } else if (pinMode === "unlock_hide") {
-      if (inputPin === savedPin) {
-        setShowPinModal(false);
-        setTimeout(() => {
-          executePrivacyLock(currentSelectedIds);
-        }, 100);
-      } else {
-        alert("Incorrect PIN! Please try again.");
-        setInputPin("");
-        setTimeout(() => pinInputRef.current?.focus(), 100);
-      }
-
-    } else if (pinMode === "unlock_view") {
-      if (inputPin === savedPin) {
-        setShowPinModal(false);
-        setTimeout(async () => {
-          try {
-            const data = await getPrivacyVideos();
-            setPrivacyVideosList(data || []);
-            setShowPrivacyModal(true);
-          } catch (err) {
-            console.error("Privacy storage read error:", err);
-            setPrivacyVideosList([]);
-            setShowPrivacyModal(true);
-          }
-        }, 100);
-      } else {
-        alert("Incorrect PIN! Please try again.");
-        setInputPin("");
-        setTimeout(() => pinInputRef.current?.focus(), 100);
-      }
     }
   };
 
@@ -411,7 +316,6 @@ function Index() {
         }}
       />
 
-      {/* STICKY TOP HEADER */}
       <div className="px-4 pt-5 pb-3 space-y-4 sticky top-0 bg-background/95 backdrop-blur z-30 border-b border-border/50">
         {selectMode ? (
           <div className="flex items-center justify-between h-10 animate-fadeIn">
@@ -449,9 +353,6 @@ function Index() {
                     </button>
                     <button onClick={() => handleDropdownAction("Storage Info")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
                       <HardDrive className="h-4 w-4 text-primary" /><span className="font-medium">Storage Info</span>
-                    </button>
-                    <button onClick={() => handleDropdownAction("Privacy Folder")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
-                      <Lock className="h-4 w-4 text-primary" /><span className="font-medium">Privacy Folder</span>
                     </button>
                     <button onClick={() => handleDropdownAction("History")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
                       <History className="h-4 w-4 text-primary" /><span className="font-medium">History</span>
@@ -504,7 +405,6 @@ function Index() {
         )}
       </div>
 
-      {/* WATCHING HISTORY */}
       {!selectMode && watchingHistory.length > 0 && !currentFolder && (
         <div className="mt-2 mb-4 border-b border-border/20 pb-4">
           <div className="px-4 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -537,7 +437,6 @@ function Index() {
         </div>
       )}
 
-      {/* MAIN CONTENT */}
       {filteredVideos.length === 0 ? (
         <div className="px-6 py-16 text-center text-muted-foreground text-sm">
           No videos yet. Drop videos into your storage to start playing.
@@ -546,89 +445,6 @@ function Index() {
         contentLayout
       )}
 
-      {/* ✅ FIXED PIN MODAL — saari problems yahan thi */}
-      {showPinModal && (
-        <div
-          className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[99999]"
-          // ✅ FIX: Background tap se modal band nahi hoga
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <div className="bg-[#0b1220] w-[300px] rounded-[24px] p-6 border border-white/10 shadow-2xl text-center space-y-5">
-            
-            <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
-              <Lock className="h-5 w-5" />
-            </div>
-
-            <div>
-              <h3 className="text-base font-bold text-white tracking-wide">
-                {pinMode === "setup" ? "Set Privacy Password" : "Enter Privacy PIN"}
-              </h3>
-              <p className="text-xs text-slate-400 mt-1 px-2">
-                {pinMode === "setup"
-                  ? "Create a 4-digit PIN to secure your hidden videos"
-                  : "Please enter verification code to continue"}
-              </p>
-            </div>
-
-            {/* ✅ FIX: Simple visible input — koi overlay nahi, koi z-index conflict nahi */}
-            <input
-              ref={pinInputRef}
-              type="tel"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              maxLength={4}
-              value={inputPin}
-              onChange={(e) => {
-                const val = e.target.value.replace(/\D/g, "").slice(0, 4);
-                setInputPin(val);
-              }}
-              placeholder="● ● ● ●"
-              autoFocus
-              className="w-full bg-white/10 border-2 border-white/20 focus:border-primary rounded-2xl px-4 py-3 text-white text-center text-2xl tracking-[16px] focus:outline-none transition-colors placeholder:text-white/20 placeholder:tracking-[16px]"
-            />
-
-            {/* PIN dot indicators */}
-            <div className="flex justify-center gap-3">
-              {[0, 1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className={`w-3 h-3 rounded-full transition-all duration-200 ${
-                    inputPin.length > i ? "bg-primary scale-110" : "bg-white/20"
-                  }`}
-                />
-              ))}
-            </div>
-
-            {/* ✅ FIX: onPointerDown use kiya — Android pe onClick se zyada reliable */}
-            <div className="flex gap-3 text-xs font-semibold">
-              <button
-                type="button"
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  setInputPin("");
-                  setShowPinModal(false);
-                }}
-                className="flex-1 py-3 rounded-xl bg-white/[0.07] text-white/90 active:bg-white/15 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  if (inputPin.length === 4) handlePinSubmit();
-                }}
-                disabled={inputPin.length !== 4}
-                className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground disabled:opacity-30 active:scale-95 transition-all font-bold"
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* RENAME MODAL */}
       {showRenameModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
           <div className="bg-background w-full max-w-xs rounded-2xl p-4 border border-border/80 shadow-2xl space-y-3">
@@ -647,38 +463,6 @@ function Index() {
         </div>
       )}
 
-      {/* PRIVACY FOLDER VIEWER — Lock icon + Hidden title */}
-      {showPrivacyModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex flex-col z-50 p-4">
-          <div className="flex items-center justify-between border-b border-border/40 pb-3 mb-3">
-            <div className="flex items-center gap-2 font-bold text-primary">
-              <Lock className="h-5 w-5" />
-              <span>Secure Privacy Storage</span>
-            </div>
-            <button onClick={() => setShowPrivacyModal(false)} className="p-1 rounded-full bg-secondary text-foreground">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto space-y-2">
-            {privacyVideosList.length === 0 ? (
-              <p className="text-center text-xs text-muted-foreground mt-10">No videos inside secure privacy folder.</p>
-            ) : (
-              privacyVideosList.map((v, index) => (
-                <div key={`priv-${v.id}`} className="flex items-center gap-3 p-2 bg-secondary/30 rounded-xl">
-                  <div className="h-12 w-20 rounded-lg bg-black/50 border border-white/10 flex items-center justify-center flex-shrink-0">
-                    <Lock className="h-5 w-5 text-primary opacity-80" />
-                  </div>
-                  <span className="text-xs font-medium truncate flex-1 text-white/40 italic">
-                    Hidden Video {index + 1}
-                  </span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* STORAGE INFO MODAL */}
       {showStorageModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-background w-full max-w-xs rounded-2xl p-4 border border-border/80 shadow-2xl space-y-4 text-center">
@@ -696,7 +480,6 @@ function Index() {
         </div>
       )}
 
-      {/* HISTORY MODAL */}
       {showHistoryModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex flex-col z-50 p-4">
           <div className="flex items-center justify-between border-b border-border/40 pb-3 mb-3">
@@ -726,15 +509,11 @@ function Index() {
         </div>
       )}
 
-      {/* BOTTOM ACTION BAR */}
       {selectMode && (
         <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-md bg-background/95 border-t border-border/60 backdrop-blur-md shadow-2xl z-50 animate-slideUp">
           <div className="flex items-center justify-around py-3 px-2">
             <button onClick={onShare} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Share2 className="h-5 w-5 mb-1" /><span className="text-[10px] font-medium text-foreground/80">Share</span>
-            </button>
-            <button onClick={onPrivacySecure} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
-              <Lock className="h-5 w-5 mb-1" /><span className="text-[10px] font-medium text-foreground/80">Privacy</span>
             </button>
             <button onClick={onDelete} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-destructive disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Trash2 className="h-5 w-5 mb-1" /><span className="text-[10px] font-medium text-foreground/80">Delete</span>
@@ -830,4 +609,3 @@ function VideoRow({
     </li>
   );
 }
-
