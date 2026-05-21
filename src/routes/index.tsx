@@ -98,7 +98,7 @@ function Index() {
     if (showPinModal) {
       setTimeout(() => {
         pinInputRef.current?.focus();
-      }, 100);
+      }, 150);
     }
   }, [showPinModal]);
 
@@ -387,7 +387,7 @@ function Index() {
       } else {
         alert("Incorrect PIN! Please try again.");
         setInputPin("");
-        pinInputRef.current?.focus();
+        setTimeout(() => pinInputRef.current?.focus(), 50);
       }
     } else if (pinMode === "unlock_view") {
       if (inputPin === savedPin) {
@@ -398,7 +398,7 @@ function Index() {
       } else {
         alert("Incorrect PIN! Please try again.");
         setInputPin("");
-        pinInputRef.current?.focus();
+        setTimeout(() => pinInputRef.current?.focus(), 50);
       }
     }
   };
@@ -622,7 +622,7 @@ function Index() {
               </p>
             </div>
             
-            {/* Real Invisible Input */}
+            {/* Real Invisible Input (z-index fixed to allow tap and focus) */}
             <div className="relative w-full max-w-[210px] mx-auto h-12 mt-2">
               <input 
                 ref={pinInputRef}
@@ -632,11 +632,11 @@ function Index() {
                 inputMode="numeric"
                 value={inputPin}
                 onChange={(e) => setInputPin(e.target.value.replace(/\D/g, ""))}
-                className="absolute inset-0 w-full h-full opacity-0 z-20 cursor-pointer text-center"
+                className="absolute inset-0 w-full h-full opacity-0 z-30 cursor-pointer text-center"
                 autoFocus
               />
 
-              {/* ✨ MODERNISED SQUARE BOXES DESIGN (NO CIRCLES!) */}
+              {/* ✨ MODERNISED SQUARE BOXES DESIGN */}
               <div className="absolute inset-0 flex justify-between items-center gap-3 z-10 pointer-events-none">
                 {[0, 1, 2, 3].map((index) => {
                   const isFocused = inputPin.length === index;
@@ -661,15 +661,15 @@ function Index() {
               </div>
             </div>
 
-            {/* Premium Flat Buttons Layout */}
-            <div className="flex gap-3 text-xs font-semibold pt-2 relative z-30">
+            {/* Premium Flat Buttons Layout (z-index and events handled perfectly) */}
+            <div className="flex gap-3 text-xs font-semibold pt-2 relative z-40">
               <button 
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowPinModal(false);
                 }} 
-                className="flex-1 py-3 rounded-xl bg-white/[0.05] text-white/90 active:bg-white/10 transition-colors"
+                className="flex-1 py-3 rounded-xl bg-white/[0.05] text-white/90 active:bg-white/10 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -680,7 +680,7 @@ function Index() {
                   handlePinSubmit();
                 }} 
                 disabled={inputPin.length !== 4}
-                className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-transform font-bold"
+                className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-transform font-bold cursor-pointer"
               >
                 Confirm
               </button>
