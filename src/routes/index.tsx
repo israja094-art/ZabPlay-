@@ -79,24 +79,21 @@ function Index() {
   const [showStorageModal, setShowStorageModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
-  // --- 🔐 NEW SECURITY PASSWORD SYSTEM STATES ---
+  // --- 🔐 SECURITY PASSWORD SYSTEM STATES ---
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinMode, setPinMode] = useState<"setup" | "unlock_hide" | "unlock_view">("setup");
   const [inputPin, setInputPin] = useState("");
   const [savedPin, setSavedPin] = useState<string | null>(null);
   
-  // Keyboard Auto-focus aur Touch binding ke liye ref
   const pinInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // LocalStorage se saved password check karo
     const pin = localStorage.getItem("zabplay_privacy_pin");
     if (pin) {
       setSavedPin(pin);
     }
   }, []);
 
-  // Jab bhi Modal khule, keyboard ko automatic open karne ka logic
   useEffect(() => {
     if (showPinModal) {
       setTimeout(() => {
@@ -285,7 +282,6 @@ function Index() {
     setSelected(new Set());
   };
 
-  // 🔥 REAL DELETE FUNCTION
   const onDelete = () => {
     if (selected.size === 0) return;
     if (confirm(`Delete ${selected.size} video(s)?`)) {
@@ -294,7 +290,6 @@ function Index() {
     }
   };
 
-  // 🔥 REAL SHARE FUNCTION
   const onShare = () => {
     const items = videos
       .filter((v) => selected.has(v.id))
@@ -304,7 +299,6 @@ function Index() {
     exitSelect();
   };
 
-  // 🔥 REAL PRIVACY HIDE FUNCTION TRIGGER WITH PIN VALIDATION
   const onPrivacySecure = () => {
     if (selected.size === 0) return;
     setInputPin("");
@@ -316,14 +310,12 @@ function Index() {
     setShowPinModal(true);
   };
 
-  // Actual process of locking after PIN is verified
   const executePrivacyLock = () => {
     moveVideosToPrivacy([...selected]);
     alert(`${selected.size} Video(s) successfully locked in Privacy Folder!`);
     exitSelect();
   };
 
-  // 🔥 REAL RENAME TRIGGER FUNCTION
   const onRename = () => {
     if (selected.size === 0) return;
     const firstId = Array.from(selected)[0];
@@ -335,7 +327,6 @@ function Index() {
     }
   };
 
-  // Save the naya real name
   const saveRenameAction = async () => {
     if (renameTargetId && newTitleValue.trim()) {
       await renameVideoFile(renameTargetId, newTitleValue.trim());
@@ -344,7 +335,6 @@ function Index() {
     }
   };
 
-  // ⚠️ IGNORED FEATURES KEEPING ONLY DEFAULT ALERTS
   const onFileTransfer = () => {
     if (selected.size === 0) return;
     alert(`Transferring ${selected.size} video file(s)...`);
@@ -357,7 +347,6 @@ function Index() {
     exitSelect();
   };
 
-  // --- 👑 THREE-DOT REAL ACTIONS MANAGER WITH SECURITY TRIGGER ---
   const handleDropdownAction = async (actionName: string) => {
     if (actionName === "Settings") {
       alert(`Opening feature: ${actionName}`);
@@ -380,7 +369,6 @@ function Index() {
     }
   };
 
-  // --- 🔐 PIN SUBMIT HANDLER SYSTEM ---
   const handlePinSubmit = async () => {
     if (inputPin.length !== 4) {
       alert("Please enter a valid 4-digit PIN.");
@@ -446,7 +434,6 @@ function Index() {
       {/* --- STICKY TOP HEADER ZONE --- */}
       <div className="px-4 pt-5 pb-3 space-y-4 sticky top-0 bg-background/95 backdrop-blur z-30 border-b border-border/50">
         {selectMode ? (
-          /* SELECT MODE ACTIVATED HEADER */
           <div className="flex items-center justify-between h-10 animate-fadeIn">
             <div className="flex items-center gap-3">
               <button onClick={handleSelectAllToggle} className="text-primary active:scale-90 transition-transform" aria-label="Select All Toggle">
@@ -465,7 +452,6 @@ function Index() {
             </button>
           </div>
         ) : (
-          /* NORMAL MODE HEADER */
           <div className="space-y-3">
             <div className="flex items-center justify-between h-10">
               <Logo />
@@ -489,40 +475,32 @@ function Index() {
                   <MoreVertical className="h-5 w-5 font-bold scale-y-110" />
                 </button>
 
-                {/* THREE-DOT PREMIUM OPTIONS DROPDOWN MENU */}
                 {showMenuDropdown && (
                   <div className="absolute right-0 top-12 w-52 bg-background/95 border border-border/80 rounded-2xl shadow-2xl z-50 py-2 animate-scaleUp backdrop-blur-md">
-                    
                     <button onClick={() => handleDropdownAction("File Transfer")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
                       <ArrowRightLeft className="h-4 w-4 text-primary" />
                       <span className="font-medium">File Transfer</span>
                     </button>
-
                     <button onClick={() => handleDropdownAction("Storage Info")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
                       <HardDrive className="h-4 w-4 text-primary" />
                       <span className="font-medium">Storage Info</span>
                     </button>
-
                     <button onClick={() => handleDropdownAction("Privacy Folder")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
                       <Lock className="h-4 w-4 text-primary" />
                       <span className="font-medium">Privacy Folder</span>
                     </button>
-
                     <button onClick={() => handleDropdownAction("History")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
                       <History className="h-4 w-4 text-primary" />
                       <span className="font-medium">History</span>
                     </button>
-
                     <button onClick={() => handleDropdownAction("MP3 Converter")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
                       <Music className="h-4 w-4 text-primary" />
                       <span className="font-medium">MP3 Converter</span>
                     </button>
-
                     <button onClick={() => handleDropdownAction("Settings")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left border-t border-border/40 mt-1 pt-2">
                       <Settings2 className="h-4 w-4 text-primary" />
                       <span className="font-medium">Settings</span>
                     </button>
-
                   </div>
                 )}
               </div>
@@ -596,27 +574,15 @@ function Index() {
                 className="w-32 flex-shrink-0 text-left snap-start space-y-1.5 group active:opacity-70 transition-opacity"
               >
                 <div className="relative h-20 w-32 overflow-hidden rounded-lg border border-border/50 bg-secondary/60">
-                  <img
-                    src={item.thumb}
-                    alt={item.title}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                  />
+                  <img src={item.thumb} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
                   <div className="absolute bottom-0 left-0 w-full h-1 bg-black/40">
-                    <div 
-                      className="h-full bg-red-500 transition-all duration-300" 
-                      style={{ width: `${item.progress}%` }} 
-                    />
+                    <div className="h-full bg-red-500 transition-all duration-300" style={{ width: `${item.progress}%` }} />
                   </div>
                   <div className="absolute inset-x-0 bottom-1.5 px-2 py-0.5 text-right">
-                    <span className="text-[9px] text-white font-medium bg-black/60 px-1 rounded">
-                      {item.duration}
-                    </span>
+                    <span className="text-[9px] text-white font-medium bg-black/60 px-1 rounded">{item.duration}</span>
                   </div>
                 </div>
-                <p className="text-xs font-medium text-foreground line-clamp-1 group-hover:text-primary transition-colors">
-                  {item.title}
-                </p>
+                <p className="text-xs font-medium text-foreground line-clamp-1 group-hover:text-primary transition-colors">{item.title}</p>
               </button>
             ))}
           </div>
@@ -632,32 +598,32 @@ function Index() {
         contentLayout
       )}
 
-      {/* --- 🔐 FIXED REAL MODAL: PRIVACY PIN SETUP & UNLOCK ENGINE --- */}
+      {/* --- 🔐 PREMIUM FIXED MODAL: PRIVACY PIN SETUP & UNLOCK ENGINE --- */}
       {showPinModal && (
         <div 
-          className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-[9999]"
+          className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-[9999]"
           onClick={() => pinInputRef.current?.focus()}
         >
           <div 
-            className="bg-[#0b1220] w-full max-w-xs rounded-[28px] p-6 border border-white/10 shadow-2xl space-y-5 text-center relative"
+            className="bg-[#0b1220] w-[290px] rounded-[24px] p-6 border border-white/10 shadow-2xl text-center relative space-y-5"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
-              <Lock className="h-6 w-6" />
+              <Lock className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-white">
+              <h3 className="text-base font-bold text-white tracking-wide">
                 {pinMode === "setup" ? "Set Privacy Password" : "Enter Privacy PIN"}
               </h3>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-slate-400 mt-1 px-2">
                 {pinMode === "setup" 
                   ? "Create a 4-digit PIN to secure your hidden videos" 
                   : "Please enter verification code to continue"}
               </p>
             </div>
             
-            {/* Real Hidden Input Layer - Placed on top of dots but transparent */}
-            <div className="relative w-full max-w-[200px] mx-auto h-14 mt-2">
+            {/* Real Invisible Input */}
+            <div className="relative w-full max-w-[210px] mx-auto h-12 mt-2">
               <input 
                 ref={pinInputRef}
                 type="text" 
@@ -670,28 +636,32 @@ function Index() {
                 autoFocus
               />
 
-              {/* Visual 4-Boxes UI Grid with live entry dots */}
+              {/* ✨ MODERNISED SQUARE BOXES DESIGN (NO CIRCLES!) */}
               <div className="absolute inset-0 flex justify-between items-center gap-3 z-10 pointer-events-none">
-                {[0, 1, 2, 3].map((index) => (
-                  <div 
-                    key={index} 
-                    className={`w-11 h-13 rounded-2xl border flex items-center justify-center text-lg font-bold transition-all ${
-                      inputPin.length === index 
-                        ? "border-primary bg-primary/10 shadow-lg scale-105" 
-                        : "border-white/10 bg-white/[0.03]"
-                    }`}
-                  >
-                    {inputPin.length > index ? (
-                      <span className="text-white text-xl leading-none">●</span>
-                    ) : (
-                      <span className="text-white/20 text-sm">○</span>
-                    )}
-                  </div>
-                ))}
+                {[0, 1, 2, 3].map((index) => {
+                  const isFocused = inputPin.length === index;
+                  const hasValue = inputPin.length > index;
+                  return (
+                    <div 
+                      key={index} 
+                      className={`w-11 h-11 rounded-xl border flex items-center justify-center transition-all duration-200 ${
+                        isFocused 
+                          ? "border-primary bg-primary/10 shadow-[0_0_12px_rgba(var(--primary),0.3)] scale-105" 
+                          : "border-white/10 bg-white/[0.03]"
+                      }`}
+                    >
+                      {hasValue ? (
+                        <span className="text-white text-sm font-bold">{inputPin[index]}</span>
+                      ) : (
+                        <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
-            {/* Bottom Buttons Fix for Event Trapping */}
+            {/* Premium Flat Buttons Layout */}
             <div className="flex gap-3 text-xs font-semibold pt-2 relative z-30">
               <button 
                 type="button"
@@ -699,7 +669,7 @@ function Index() {
                   e.stopPropagation();
                   setShowPinModal(false);
                 }} 
-                className="flex-1 py-3 rounded-xl bg-white/[0.05] text-white active:bg-white/10 transition-colors"
+                className="flex-1 py-3 rounded-xl bg-white/[0.05] text-white/90 active:bg-white/10 transition-colors"
               >
                 Cancel
               </button>
@@ -710,7 +680,7 @@ function Index() {
                   handlePinSubmit();
                 }} 
                 disabled={inputPin.length !== 4}
-                className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-transform"
+                className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-transform font-bold"
               >
                 Confirm
               </button>
@@ -817,37 +787,30 @@ function Index() {
       {selectMode && (
         <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-md bg-background/95 border-t border-border/60 backdrop-blur-md shadow-2xl z-50 animate-slideUp">
           <div className="flex items-center justify-around py-3 px-2">
-            
             <button onClick={onShare} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Share2 className="h-5 w-5 mb-1" />
               <span className="text-[10px] font-medium text-foreground/80">Share</span>
             </button>
-
             <button onClick={onPrivacySecure} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Lock className="h-5 w-5 mb-1" />
               <span className="text-[10px] font-medium text-foreground/80">Privacy</span>
             </button>
-
             <button onClick={onDelete} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-destructive disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Trash2 className="h-5 w-5 mb-1" />
               <span className="text-[10px] font-medium text-foreground/80">Delete</span>
             </button>
-
             <button onClick={onFileTransfer} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <ArrowRightLeft className="h-5 w-5 mb-1" />
               <span className="text-[10px] font-medium text-foreground/80">Transfer</span>
             </button>
-
             <button onClick={onVideoCut} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Scissors className="h-5 w-5 mb-1" />
               <span className="text-[10px] font-medium text-foreground/80">Cut Video</span>
             </button>
-
             <button onClick={onRename} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Edit3 className="h-5 w-5 mb-1" />
               <span className="text-[10px] font-medium text-foreground/80">Rename</span>
             </button>
-
           </div>
         </div>
       )}
@@ -913,8 +876,6 @@ function VideoRow({
       >
         <div className="relative h-20 w-32 overflow-hidden rounded-lg border border-border/60 bg-secondary/70 flex-shrink-0">
           <img src={video.thumb} alt={video.title} className="h-full w-full object-cover" loading="lazy" />
-          
-          {/* Checkbox overlay when selectMode is active */}
           {selectMode && (
             <div className="absolute top-1.5 left-1.5 bg-black/40 rounded-full p-0.5 backdrop-blur-sm z-10">
               {selected ? (
@@ -924,7 +885,6 @@ function VideoRow({
               )}
             </div>
           )}
-
           {progress > 2 && (
             <div className="absolute bottom-0 left-0 w-full h-1 bg-white/20">
               <div className="h-full bg-red-500" style={{ width: `${progress}%` }} />
@@ -941,3 +901,4 @@ function VideoRow({
     </li>
   );
 }
+
