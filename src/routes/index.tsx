@@ -601,12 +601,15 @@ function Index() {
       {/* --- 🔐 PREMIUM FIXED MODAL: PRIVACY PIN SETUP & UNLOCK ENGINE --- */}
       {showPinModal && (
         <div 
-          className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-[9999]"
+          className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[99999] pointer-events-auto"
           onClick={() => pinInputRef.current?.focus()}
         >
           <div 
-            className="bg-[#0b1220] w-[290px] rounded-[24px] p-6 border border-white/10 shadow-2xl text-center relative space-y-5"
-            onClick={(e) => e.stopPropagation()}
+            className="bg-[#0b1220] w-[290px] rounded-[24px] p-6 border border-white/10 shadow-2xl text-center relative space-y-5 pointer-events-auto"
+            onClick={(e) => {
+              e.stopPropagation();
+              pinInputRef.current?.focus();
+            }}
           >
             <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
               <Lock className="h-5 w-5" />
@@ -622,8 +625,8 @@ function Index() {
               </p>
             </div>
             
-            {/* Real Invisible Input (z-index fixed to allow tap and focus) */}
-            <div className="relative w-full max-w-[210px] mx-auto h-12 mt-2">
+            {/* Real Transparent Input (Fixed height & click priority layout) */}
+            <div className="relative w-full max-w-[210px] mx-auto h-12 mt-2 pointer-events-auto">
               <input 
                 ref={pinInputRef}
                 type="text" 
@@ -632,7 +635,7 @@ function Index() {
                 inputMode="numeric"
                 value={inputPin}
                 onChange={(e) => setInputPin(e.target.value.replace(/\D/g, ""))}
-                className="absolute inset-0 w-full h-full opacity-0 z-30 cursor-pointer text-center"
+                className="absolute inset-0 w-full h-full opacity-0 z-50 cursor-pointer text-center pointer-events-auto"
                 autoFocus
               />
 
@@ -662,14 +665,14 @@ function Index() {
             </div>
 
             {/* Premium Flat Buttons Layout (z-index and events handled perfectly) */}
-            <div className="flex gap-3 text-xs font-semibold pt-2 relative z-40">
+            <div className="flex gap-3 text-xs font-semibold pt-2 relative z-[99999] pointer-events-auto">
               <button 
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowPinModal(false);
                 }} 
-                className="flex-1 py-3 rounded-xl bg-white/[0.05] text-white/90 active:bg-white/10 transition-colors cursor-pointer"
+                className="flex-1 py-3 rounded-xl bg-white/[0.05] text-white/90 active:bg-white/10 transition-colors cursor-pointer pointer-events-auto"
               >
                 Cancel
               </button>
@@ -680,7 +683,7 @@ function Index() {
                   handlePinSubmit();
                 }} 
                 disabled={inputPin.length !== 4}
-                className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-transform font-bold cursor-pointer"
+                className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-transform font-bold cursor-pointer pointer-events-auto"
               >
                 Confirm
               </button>
