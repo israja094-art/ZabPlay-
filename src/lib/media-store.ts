@@ -38,6 +38,7 @@ const LS_DELETED_V = "zabplay.deleted.videos";
 const LS_DELETED_S = "zabplay.deleted.songs";
 const LS_PRIVACY_V = "zabplay.privacy.videos"; // Privacy hidden videos storage track
 const LS_RENAMED_V = "zabplay.renamed.videos"; // Custom renamed native/default videos tracker
+const LS_PRIVACY_PIN = "zabplay.privacy.pin"; // 6-digit numeric pin saver
 const DB_NAME = "zabplay-media-db";
 const DB_VERSION = 1;
 const VIDEO_STORE = "videos";
@@ -362,14 +363,37 @@ export const moveVideosToPrivacy = (ids: string[]) => {
   emit();
 };
 
+// 🔥 NEW FEATURE: UNLOCK / REMOVE FROM PRIVACY FOLDER
+export const removeVideosFromPrivacy = (ids: string[]) => {
+  for (const id of ids) {
+    privacyV.delete(id);
+  }
+  saveDeleted(LS_PRIVACY_V, privacyV);
+  emit();
+};
+
 // 🔥 REAL WORKING FEATURE: READ ALL HIDDEN PRIVACY VIDEOS DATA
 export const getPrivacyVideos = async (): Promise<Video[]> => {
-  const nv = getNativeVideos().map(video => ({
-    ...video,
-    title: renamedMap[video.id] || video.title
-  }));
+  const nv = getNativeVideos().map(video => {
+    const cached = nativeDurationCache.get(video.id);
+    return {
+      ...video,
+      title: renamedMap[video.id] || video.title,
+      duration: cached?.duration || video.duration,
+      thumb: cached?.thumb || video.thumb
+    };
+  });
   const allMedia = [...nv, ...userVideos, ...defaultVideos];
   return allMedia.filter(v => privacyV.has(v.id));
+};
+
+// 🔥 NEW PASSWORD FEATURES FOR PRIVACY FUNCTIONALITY
+export const getPrivacyPin = (): string | null => {
+  return localStorage.getItem(LS_PRIVACY_PIN);
+};
+
+export const setPrivacyPin = (pin: string) => {
+  localStorage.setItem(LS_PRIVACY_PIN, pin);
 };
 
 const probeVideo = (url: string): Promise<{ duration: string; thumb: string }> =>
@@ -490,12 +514,10 @@ export const shareItems = async (items: { id: string; title: string; src: string
     const filesToShare: string[] = [];
 
     for (const item of items) {
-      // Agar video native internal scanner se hai, toh id mein "nv-file://..." hota hai
       if (item.id && item.id.startsWith("nv-")) {
-        const rawNativePath = item.id.replace("nv-", ""); // Extracting actual file:// path
+        const rawNativePath = item.id.replace("nv-", "");
         
         try {
-          // Resolve internal path to a secure content URI that WhatsApp can read
           const fileUriResult = await Filesystem.getUri({
             path: rawNativePath,
           });
@@ -512,14 +534,12 @@ export const shareItems = async (items: { id: string; title: string; src: string
     }
 
     if (filesToShare.length > 0) {
-      // 👑 Fire Capacitor True Native Android Sheet with proper Video MIME Type forced
       await Share.share({
         title: items[0].title,
         files: filesToShare,
         dialogTitle: "Share Video",
       });
     } else {
-      // Fallback if it's a default/asset video or stream URL
       const textToSend = items.map((i) => `${i.title}`).join("\n");
       await Share.share({
         title: "ZabPlay Media",
