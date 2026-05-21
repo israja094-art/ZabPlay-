@@ -98,7 +98,7 @@ function Index() {
     if (showPinModal) {
       setTimeout(() => {
         pinInputRef.current?.focus();
-      }, 150);
+      }, 200); // Thoda delay taaki Android keyboard smooth khule
     }
   }, [showPinModal]);
 
@@ -376,13 +376,11 @@ function Index() {
       return;
     }
 
-    // 1. Keyboard ko sabse pehle niche bitha do taaki input lock na phase
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
 
     if (pinMode === "setup") {
-      // Setup direct close bina spinner lagaye
       localStorage.setItem("zabplay_privacy_pin", inputPin);
       setSavedPin(inputPin);
       setShowPinModal(false);
@@ -392,9 +390,7 @@ function Index() {
 
     } else if (pinMode === "unlock_hide") {
       if (inputPin === savedPin) {
-        // Pehle modal gayab karo taaki UI freeze na lage
         setShowPinModal(false);
-        // Chupchaap next micro-task me file operation run karo
         setTimeout(() => {
           executePrivacyLock();
         }, 150);
@@ -406,9 +402,7 @@ function Index() {
 
     } else if (pinMode === "unlock_view") {
       if (inputPin === savedPin) {
-        // Modal turant band karo
         setShowPinModal(false);
-        // Background non-blocking execution
         setTimeout(async () => {
           try {
             const data = await getPrivacyVideos();
@@ -623,17 +617,14 @@ function Index() {
         contentLayout
       )}
 
-      {/* --- 🔐 PREMIUM FIXED MODAL: PRIVACY PIN SETUP & UNLOCK ENGINE --- */}
+      {/* --- 🔐 FIXED PRIVACY PIN MODAL SYSTEM --- */}
       {showPinModal && (
-        <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[99999] pointer-events-auto"
-          onClick={() => pinInputRef.current?.focus()}
-        >
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[99999]">
           <div 
-            className="bg-[#0b1220] w-[290px] rounded-[24px] p-6 border border-white/10 shadow-2xl text-center relative space-y-5 pointer-events-auto"
+            className="bg-[#0b1220] w-[290px] rounded-[24px] p-6 border border-white/10 shadow-2xl text-center relative space-y-5"
             onClick={(e) => {
               e.stopPropagation();
-              pinInputRef.current?.focus();
+              pinInputRef.current?.focus(); // Pura box clickable hai taaki input par hi focus rahe
             }}
           >
             <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
@@ -650,8 +641,8 @@ function Index() {
               </p>
             </div>
             
-            {/* Real Transparent Input (Fixed height & click priority layout) */}
-            <div className="relative w-full max-w-[210px] mx-auto h-12 mt-2 pointer-events-auto">
+            {/* Real Input Layer - Focus aur typing hamesha trigger karega */}
+            <div className="relative w-full max-w-[210px] mx-auto h-12 mt-2">
               <input 
                 ref={pinInputRef}
                 type="text" 
@@ -660,12 +651,13 @@ function Index() {
                 inputMode="numeric"
                 value={inputPin}
                 onChange={(e) => setInputPin(e.target.value.replace(/\D/g, ""))}
-                className="absolute inset-0 w-full h-full opacity-0 z-50 cursor-pointer text-center pointer-events-auto"
+                // Pure area par failaya taaki touch bilkul block na ho aur cursor blink kare
+                className="absolute inset-0 w-full h-full opacity-100 bg-transparent text-white text-center text-2xl tracking-[26px] pl-5 focus:outline-none z-50 font-bold"
                 autoFocus
               />
 
-              {/* ✨ MODERNISED SQUARE BOXES DESIGN */}
-              <div className="absolute inset-0 flex justify-between items-center gap-3 z-10 pointer-events-none">
+              {/* Box Borders Design Layer - Background me set kiya hai fallback ke liye */}
+              <div className="absolute inset-0 flex justify-between items-center gap-3 z-0 pointer-events-none">
                 {[0, 1, 2, 3].map((index) => {
                   const isFocused = inputPin.length === index;
                   const hasValue = inputPin.length > index;
@@ -678,26 +670,23 @@ function Index() {
                           : "border-white/10 bg-white/[0.03]"
                       }`}
                     >
-                      {hasValue ? (
-                        <span className="text-white text-sm font-bold">{inputPin[index]}</span>
-                      ) : (
-                        <span className="w-1.5 h-1.5 rounded-full bg-white/20" />
-                      )}
+                      {!hasValue && <span className="w-1.5 h-1.5 rounded-full bg-white/20" />}
                     </div>
                   );
                 })}
               </div>
             </div>
 
-            {/* Premium Flat Buttons Layout */}
-            <div className="flex gap-3 text-xs font-semibold pt-2 relative z-[99999] pointer-events-auto">
+            {/* Flat Buttons Layout - e.stopPropagation lagaya hai taaki modal background click isko dismiss na kare */}
+            <div className="flex gap-3 text-xs font-semibold pt-2 relative z-50">
               <button 
                 type="button"
                 onClick={(e) => {
-                  e.stopPropagation();
+                  e.stopPropagation(); // Infinite focus loop ko break karne ke liye
+                  setInputPin("");
                   setShowPinModal(false);
                 }} 
-                className="flex-1 py-3 rounded-xl bg-white/[0.05] text-white/90 active:bg-white/10 transition-colors cursor-pointer pointer-events-auto"
+                className="flex-1 py-3 rounded-xl bg-white/[0.05] text-white/90 active:bg-white/10 transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -708,7 +697,7 @@ function Index() {
                   handlePinSubmit();
                 }} 
                 disabled={inputPin.length !== 4}
-                className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-transform font-bold cursor-pointer pointer-events-auto"
+                className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-transform font-bold cursor-pointer"
               >
                 Confirm
               </button>
@@ -929,3 +918,4 @@ function VideoRow({
     </li>
   );
 }
+
