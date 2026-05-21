@@ -303,15 +303,32 @@ export const useMediaStore = () =>
     () => state,
   );
 
-export const deleteVideos = (ids: string[]) => {
+// 🔥 REAL FIX: NATIVE FILE SYSTEM SE VIDEO KO COMPLETELY PURGE AUR DELETE KARNE KI ENGINE
+export const deleteVideos = async (ids: string[]) => {
   for (const id of ids) {
-    const i = userVideos.findIndex((v) => v.id === id);
-    if (i >= 0) {
-      URL.revokeObjectURL(userVideos[i].src);
-      userVideos.splice(i, 1);
-      void deleteOne(VIDEO_STORE, id);
-    } else {
+    // 1. Check native storage prefix ("nv-") to trigger real phone file deletion
+    if (id.startsWith("nv-")) {
+      const rawFilePath = id.replace("nv-", ""); // Extracting original system absolute path
+      try {
+        // Real-time phone storage se delete karega
+        await Filesystem.deleteFile({
+          path: rawFilePath
+        });
+        console.log("File completely deleted from real storage path:", rawFilePath);
+      } catch (err) {
+        console.error("Failed to delete native file from physical storage:", err);
+      }
       deletedV.add(id);
+    } else {
+      // 2. User manually imported and indexed video fallback
+      const i = userVideos.findIndex((v) => v.id === id);
+      if (i >= 0) {
+        URL.revokeObjectURL(userVideos[i].src);
+        userVideos.splice(i, 1);
+        void deleteOne(VIDEO_STORE, id);
+      } else {
+        deletedV.add(id);
+      }
     }
   }
   saveDeleted(LS_DELETED_V, deletedV);
@@ -551,4 +568,3 @@ export const shareItems = async (items: { id: string; title: string; src: string
     console.error("Error while handling capacitor native sharing:", error);
   }
 };
-
