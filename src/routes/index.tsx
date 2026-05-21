@@ -68,7 +68,6 @@ function Index() {
   
   const [watchingHistory, setWatchingHistory] = useState<HistoryItem[]>([]);
 
-  // --- POPUPS & DIALOGS REAL STATES ---
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [renameTargetId, setRenameTargetId] = useState<string | null>(null);
   const [newTitleValue, setNewTitleValue] = useState("");
@@ -79,7 +78,6 @@ function Index() {
   const [showStorageModal, setShowStorageModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
-  // --- 🔐 SECURITY PASSWORD SYSTEM STATES ---
   const [showPinModal, setShowPinModal] = useState(false);
   const [pinMode, setPinMode] = useState<"setup" | "unlock_hide" | "unlock_view">("setup");
   const [inputPin, setInputPin] = useState("");
@@ -89,16 +87,12 @@ function Index() {
 
   useEffect(() => {
     const pin = localStorage.getItem("zabplay_privacy_pin");
-    if (pin) {
-      setSavedPin(pin);
-    }
+    if (pin) setSavedPin(pin);
   }, []);
 
   useEffect(() => {
     if (showPinModal) {
-      setTimeout(() => {
-        pinInputRef.current?.focus();
-      }, 200);
+      setTimeout(() => pinInputRef.current?.focus(), 300);
     }
   }, [showPinModal]);
 
@@ -116,7 +110,6 @@ function Index() {
         console.error("Error loading history:", e);
       }
     };
-
     loadHistory();
   }, [videos, activeTab]);
 
@@ -134,17 +127,12 @@ function Index() {
   useEffect(() => {
     const triggerFirstScan = async () => {
       try {
-        console.log("App mounted: Dispatching non-blocking storage bridge authorization...");
         await runNativeScan(true);
       } catch (err) {
         console.warn("Deferred permission bridge route bypass executed", err);
       }
     };
-    
-    const timer = setTimeout(() => {
-      void triggerFirstScan();
-    }, 150);
-
+    const timer = setTimeout(() => { void triggerFirstScan(); }, 150);
     return () => clearTimeout(timer);
   }, []);
 
@@ -166,12 +154,8 @@ function Index() {
         folderName = parts[parts.length - 2] || "Internal Storage";
       }
     }
-    if (folderName.toLowerCase() === "0" || folderName === "") {
-      folderName = "Main Storage";
-    }
-    if (!foldersMap[folderName]) {
-      foldersMap[folderName] = [];
-    }
+    if (folderName.toLowerCase() === "0" || folderName === "") folderName = "Main Storage";
+    if (!foldersMap[folderName]) foldersMap[folderName] = [];
     foldersMap[folderName].push(video);
   });
 
@@ -203,10 +187,7 @@ function Index() {
         <div className="space-y-2">
           <div className="px-4 py-2 flex items-center justify-between bg-secondary/30 border-b border-border/30">
             <span className="text-sm font-semibold text-primary truncate">Folder: {currentFolder}</span>
-            <button 
-              onClick={() => setCurrentFolder(null)}
-              className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded-md font-medium"
-            >
+            <button onClick={() => setCurrentFolder(null)} className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded-md font-medium">
               Back to Folders
             </button>
           </div>
@@ -231,19 +212,14 @@ function Index() {
     } else {
       const folderNames = Object.keys(foldersMap);
       if (folderNames.length === 0) {
-        contentLayout = (
-          <div className="px-6 py-16 text-center text-muted-foreground text-sm">No folders found.</div>
-        );
+        contentLayout = <div className="px-6 py-16 text-center text-muted-foreground text-sm">No folders found.</div>;
       } else {
         contentLayout = (
           <div className="px-4 pt-3 grid grid-cols-2 gap-3">
             {folderNames.map((name) => (
               <button
                 key={name}
-                onClick={() => {
-                  if (selectMode) return;
-                  setCurrentFolder(name);
-                }}
+                onClick={() => { if (selectMode) return; setCurrentFolder(name); }}
                 className="flex flex-col items-center justify-center p-4 rounded-xl border border-border/60 bg-secondary/20 active:bg-secondary/50 transition-all text-center gap-2"
               >
                 <div className="relative p-3 bg-primary/10 rounded-xl text-primary">
@@ -252,9 +228,7 @@ function Index() {
                     {foldersMap[name].length}
                   </span>
                 </div>
-                <span className="text-sm font-medium text-foreground line-clamp-1 w-full px-1">
-                  {name}
-                </span>
+                <span className="text-sm font-medium text-foreground line-clamp-1 w-full px-1">{name}</span>
               </button>
             ))}
           </div>
@@ -266,8 +240,7 @@ function Index() {
   const toggle = (id: string) => {
     setSelected((s) => {
       const n = new Set(s);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
+      if (n.has(id)) n.delete(id); else n.add(id);
       return n;
     });
   };
@@ -291,9 +264,7 @@ function Index() {
   };
 
   const onShare = () => {
-    const items = videos
-      .filter((v) => selected.has(v.id))
-      .map((v) => ({ id: v.id, title: v.title, src: v.src }));
+    const items = videos.filter((v) => selected.has(v.id)).map((v) => ({ id: v.id, title: v.title, src: v.src }));
     if (items.length === 0) return;
     shareItems(items);
     exitSelect();
@@ -302,21 +273,15 @@ function Index() {
   const onPrivacySecure = () => {
     if (selected.size === 0) return;
     setInputPin("");
-    if (!savedPin) {
-      setPinMode("setup");
-    } else {
-      setPinMode("unlock_hide");
-    }
+    if (!savedPin) setPinMode("setup");
+    else setPinMode("unlock_hide");
     setShowPinModal(true);
   };
 
-  // ✅ FIX 3: moveVideosToPrivacy ke baad deleteVideos bhi call karo
-  // taaki video main list se bhi hat jaye
-  const executePrivacyLock = () => {
-    const selectedIds = [...selected];
-    moveVideosToPrivacy(selectedIds);
-    deleteVideos(selectedIds); // 🔴 Yeh line pehle missing thi — ab main list se bhi hatega
-    alert(`${selectedIds.length} Video(s) successfully locked in Privacy Folder!`);
+  const executePrivacyLock = (ids: string[]) => {
+    moveVideosToPrivacy(ids);
+    deleteVideos(ids);
+    alert(`${ids.length} Video(s) successfully locked in Privacy Folder!`);
     exitSelect();
   };
 
@@ -364,42 +329,35 @@ function Index() {
       setShowHistoryModal(true);
     } else if (actionName === "Privacy Folder") {
       setInputPin("");
-      if (!savedPin) {
-        setPinMode("setup");
-      } else {
-        setPinMode("unlock_view");
-      }
+      if (!savedPin) setPinMode("setup");
+      else setPinMode("unlock_view");
       setShowPinModal(true);
     }
   };
 
-  // 🔥 ADVANCED PROFESSIONAL NON-BLOCKING PIN ENGINE
+  // ✅ FIXED: PIN submit — selectedIds ko snapshot liya taaki async delay mein bhi sahi rahe
   const handlePinSubmit = () => {
     if (inputPin.length !== 4) {
       alert("Please enter a valid 4-digit PIN.");
       return;
     }
 
-    if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur();
-    }
+    const currentSelectedIds = [...selected]; // snapshot
 
-    // ✅ FIX 1: PIN setup ke baad executePrivacyLock() bhi call karo
-    // Pehle sirf PIN save hota tha, videos lock nahi hote the
     if (pinMode === "setup") {
       localStorage.setItem("zabplay_privacy_pin", inputPin);
       setSavedPin(inputPin);
       setShowPinModal(false);
       setTimeout(() => {
-        executePrivacyLock(); // 🔴 Yeh line pehle missing thi
-      }, 150);
+        executePrivacyLock(currentSelectedIds);
+      }, 100);
 
     } else if (pinMode === "unlock_hide") {
       if (inputPin === savedPin) {
         setShowPinModal(false);
         setTimeout(() => {
-          executePrivacyLock();
-        }, 150);
+          executePrivacyLock(currentSelectedIds);
+        }, 100);
       } else {
         alert("Incorrect PIN! Please try again.");
         setInputPin("");
@@ -415,11 +373,11 @@ function Index() {
             setPrivacyVideosList(data || []);
             setShowPrivacyModal(true);
           } catch (err) {
-            console.error("Native storage read crash protected:", err);
+            console.error("Privacy storage read error:", err);
             setPrivacyVideosList([]);
             setShowPrivacyModal(true);
           }
-        }, 150);
+        }, 100);
       } else {
         alert("Incorrect PIN! Please try again.");
         setInputPin("");
@@ -428,18 +386,15 @@ function Index() {
     }
   };
 
-  const currentTabVideos = activeTab === "all" 
-    ? filteredVideos 
+  const currentTabVideos = activeTab === "all"
+    ? filteredVideos
     : (currentFolder ? foldersMap[currentFolder] || [] : filteredVideos);
 
   const allSelected = currentTabVideos.length > 0 && currentTabVideos.every((v) => selected.has(v.id));
 
   const handleSelectAllToggle = () => {
-    if (allSelected) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(currentTabVideos.map((v) => v.id)));
-    }
+    if (allSelected) setSelected(new Set());
+    else setSelected(new Set(currentTabVideos.map((v) => v.id)));
   };
 
   return (
@@ -456,21 +411,15 @@ function Index() {
         }}
       />
 
-      {/* --- STICKY TOP HEADER ZONE --- */}
+      {/* STICKY TOP HEADER */}
       <div className="px-4 pt-5 pb-3 space-y-4 sticky top-0 bg-background/95 backdrop-blur z-30 border-b border-border/50">
         {selectMode ? (
           <div className="flex items-center justify-between h-10 animate-fadeIn">
             <div className="flex items-center gap-3">
-              <button onClick={handleSelectAllToggle} className="text-primary active:scale-90 transition-transform" aria-label="Select All Toggle">
-                {allSelected ? (
-                  <CheckSquare className="h-6 w-6 fill-primary/10" />
-                ) : (
-                  <Square className="h-6 w-6 text-muted-foreground" />
-                )}
+              <button onClick={handleSelectAllToggle} className="text-primary active:scale-90 transition-transform">
+                {allSelected ? <CheckSquare className="h-6 w-6 fill-primary/10" /> : <Square className="h-6 w-6 text-muted-foreground" />}
               </button>
-              <span className="text-base font-semibold text-foreground">
-                {selected.size} / {currentTabVideos.length} Selected
-              </span>
+              <span className="text-base font-semibold text-foreground">{selected.size} / {currentTabVideos.length} Selected</span>
             </div>
             <button onClick={exitSelect} className="p-2 rounded-full bg-secondary/50 text-foreground active:scale-90 transition-transform">
               <X className="h-5 w-5" />
@@ -484,53 +433,39 @@ function Index() {
                 <button
                   onClick={() => setShowSearchInput(!showSearchInput)}
                   className={`p-2 rounded-full transition-colors ${showSearchInput ? "bg-primary/20 text-primary" : "text-foreground/80 active:bg-secondary"}`}
-                  aria-label="Toggle search input"
                 >
                   <Search className="h-5 w-5" />
                 </button>
-
                 <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowMenuDropdown(!showMenuDropdown);
-                  }}
+                  onClick={(e) => { e.stopPropagation(); setShowMenuDropdown(!showMenuDropdown); }}
                   className={`p-2 rounded-full transition-colors ${showMenuDropdown ? "bg-secondary text-primary" : "text-foreground/80 active:bg-secondary"}`}
-                  aria-label="More options"
                 >
                   <MoreVertical className="h-5 w-5 font-bold scale-y-110" />
                 </button>
-
                 {showMenuDropdown && (
                   <div className="absolute right-0 top-12 w-52 bg-background/95 border border-border/80 rounded-2xl shadow-2xl z-50 py-2 animate-scaleUp backdrop-blur-md">
                     <button onClick={() => handleDropdownAction("File Transfer")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
-                      <ArrowRightLeft className="h-4 w-4 text-primary" />
-                      <span className="font-medium">File Transfer</span>
+                      <ArrowRightLeft className="h-4 w-4 text-primary" /><span className="font-medium">File Transfer</span>
                     </button>
                     <button onClick={() => handleDropdownAction("Storage Info")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
-                      <HardDrive className="h-4 w-4 text-primary" />
-                      <span className="font-medium">Storage Info</span>
+                      <HardDrive className="h-4 w-4 text-primary" /><span className="font-medium">Storage Info</span>
                     </button>
                     <button onClick={() => handleDropdownAction("Privacy Folder")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
-                      <Lock className="h-4 w-4 text-primary" />
-                      <span className="font-medium">Privacy Folder</span>
+                      <Lock className="h-4 w-4 text-primary" /><span className="font-medium">Privacy Folder</span>
                     </button>
                     <button onClick={() => handleDropdownAction("History")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
-                      <History className="h-4 w-4 text-primary" />
-                      <span className="font-medium">History</span>
+                      <History className="h-4 w-4 text-primary" /><span className="font-medium">History</span>
                     </button>
                     <button onClick={() => handleDropdownAction("MP3 Converter")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
-                      <Music className="h-4 w-4 text-primary" />
-                      <span className="font-medium">MP3 Converter</span>
+                      <Music className="h-4 w-4 text-primary" /><span className="font-medium">MP3 Converter</span>
                     </button>
                     <button onClick={() => handleDropdownAction("Settings")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left border-t border-border/40 mt-1 pt-2">
-                      <Settings2 className="h-4 w-4 text-primary" />
-                      <span className="font-medium">Settings</span>
+                      <Settings2 className="h-4 w-4 text-primary" /><span className="font-medium">Settings</span>
                     </button>
                   </div>
                 )}
               </div>
             </div>
-
             {showSearchInput && (
               <div className="relative animate-slideDown w-full">
                 <input
@@ -551,29 +486,17 @@ function Index() {
           </div>
         )}
 
-        {/* --- TAB SYSTEM DESIGN --- */}
         {!selectMode && (
           <div className="flex bg-secondary/40 p-1 rounded-xl w-full border border-border/30">
             <button
-              onClick={() => {
-                setActiveTab("all");
-                setCurrentFolder(null);
-              }}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all text-center ${
-                activeTab === "all"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              onClick={() => { setActiveTab("all"); setCurrentFolder(null); }}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all text-center ${activeTab === "all" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
             >
               All Videos
             </button>
             <button
               onClick={() => setActiveTab("folders")}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all text-center ${
-                activeTab === "folders"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all text-center ${activeTab === "folders" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
             >
               Folders
             </button>
@@ -581,7 +504,7 @@ function Index() {
         )}
       </div>
 
-      {/* --- WATCHING HISTORY HORIZONTAL SLIDER BLOCK --- */}
+      {/* WATCHING HISTORY */}
       {!selectMode && watchingHistory.length > 0 && !currentFolder && (
         <div className="mt-2 mb-4 border-b border-border/20 pb-4">
           <div className="px-4 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
@@ -614,7 +537,7 @@ function Index() {
         </div>
       )}
 
-      {/* --- MAIN CONTENT DISPLAY AREA --- */}
+      {/* MAIN CONTENT */}
       {filteredVideos.length === 0 ? (
         <div className="px-6 py-16 text-center text-muted-foreground text-sm">
           No videos yet. Drop videos into your storage to start playing.
@@ -623,83 +546,80 @@ function Index() {
         contentLayout
       )}
 
-      {/* --- 🔐 FIXED PRIVACY PIN MODAL SYSTEM --- */}
+      {/* ✅ FIXED PIN MODAL — saari problems yahan thi */}
       {showPinModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[99999]">
-          <div 
-            className="bg-[#0b1220] w-[290px] rounded-[24px] p-6 border border-white/10 shadow-2xl text-center relative space-y-5"
-            onClick={(e) => {
-              e.stopPropagation();
-              pinInputRef.current?.focus();
-            }}
-          >
+        <div
+          className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[99999]"
+          // ✅ FIX: Background tap se modal band nahi hoga
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <div className="bg-[#0b1220] w-[300px] rounded-[24px] p-6 border border-white/10 shadow-2xl text-center space-y-5">
+            
             <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
               <Lock className="h-5 w-5" />
             </div>
+
             <div>
               <h3 className="text-base font-bold text-white tracking-wide">
                 {pinMode === "setup" ? "Set Privacy Password" : "Enter Privacy PIN"}
               </h3>
               <p className="text-xs text-slate-400 mt-1 px-2">
-                {pinMode === "setup" 
-                  ? "Create a 4-digit PIN to secure your hidden videos" 
+                {pinMode === "setup"
+                  ? "Create a 4-digit PIN to secure your hidden videos"
                   : "Please enter verification code to continue"}
               </p>
             </div>
-            
-            <div className="relative w-full max-w-[210px] mx-auto h-12 mt-2">
-              <input 
-                ref={pinInputRef}
-                type="text" 
-                maxLength={4}
-                pattern="[0-9]*"
-                inputMode="numeric"
-                value={inputPin}
-                onChange={(e) => setInputPin(e.target.value.replace(/\D/g, ""))}
-                className="absolute inset-0 w-full h-full opacity-100 bg-transparent text-white text-center text-2xl tracking-[26px] pl-5 focus:outline-none z-50 font-bold"
-                autoFocus
-              />
 
-              <div className="absolute inset-0 flex justify-between items-center gap-3 z-0 pointer-events-none">
-                {[0, 1, 2, 3].map((index) => {
-                  const isFocused = inputPin.length === index;
-                  const hasValue = inputPin.length > index;
-                  return (
-                    <div 
-                      key={index} 
-                      className={`w-11 h-11 rounded-xl border flex items-center justify-center transition-all duration-200 ${
-                        isFocused 
-                          ? "border-primary bg-primary/10 shadow-[0_0_12px_rgba(var(--primary),0.3)] scale-105" 
-                          : "border-white/10 bg-white/[0.03]"
-                      }`}
-                    >
-                      {!hasValue && <span className="w-1.5 h-1.5 rounded-full bg-white/20" />}
-                    </div>
-                  );
-                })}
-              </div>
+            {/* ✅ FIX: Simple visible input — koi overlay nahi, koi z-index conflict nahi */}
+            <input
+              ref={pinInputRef}
+              type="tel"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={4}
+              value={inputPin}
+              onChange={(e) => {
+                const val = e.target.value.replace(/\D/g, "").slice(0, 4);
+                setInputPin(val);
+              }}
+              placeholder="● ● ● ●"
+              autoFocus
+              className="w-full bg-white/10 border-2 border-white/20 focus:border-primary rounded-2xl px-4 py-3 text-white text-center text-2xl tracking-[16px] focus:outline-none transition-colors placeholder:text-white/20 placeholder:tracking-[16px]"
+            />
+
+            {/* PIN dot indicators */}
+            <div className="flex justify-center gap-3">
+              {[0, 1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className={`w-3 h-3 rounded-full transition-all duration-200 ${
+                    inputPin.length > i ? "bg-primary scale-110" : "bg-white/20"
+                  }`}
+                />
+              ))}
             </div>
 
-            <div className="flex gap-3 text-xs font-semibold pt-2 relative z-50">
-              <button 
+            {/* ✅ FIX: onPointerDown use kiya — Android pe onClick se zyada reliable */}
+            <div className="flex gap-3 text-xs font-semibold">
+              <button
                 type="button"
-                onClick={(e) => {
+                onPointerDown={(e) => {
                   e.stopPropagation();
                   setInputPin("");
                   setShowPinModal(false);
-                }} 
-                className="flex-1 py-3 rounded-xl bg-white/[0.05] text-white/90 active:bg-white/10 transition-colors cursor-pointer"
+                }}
+                className="flex-1 py-3 rounded-xl bg-white/[0.07] text-white/90 active:bg-white/15 transition-colors"
               >
                 Cancel
               </button>
-              <button 
+              <button
                 type="button"
-                onClick={(e) => {
+                onPointerDown={(e) => {
                   e.stopPropagation();
-                  handlePinSubmit();
-                }} 
+                  if (inputPin.length === 4) handlePinSubmit();
+                }}
                 disabled={inputPin.length !== 4}
-                className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground disabled:opacity-30 disabled:pointer-events-none active:scale-95 transition-transform font-bold cursor-pointer"
+                className="flex-1 py-3 rounded-xl bg-primary text-primary-foreground disabled:opacity-30 active:scale-95 transition-all font-bold"
               >
                 Confirm
               </button>
@@ -708,13 +628,13 @@ function Index() {
         </div>
       )}
 
-      {/* --- REAL MODAL: RENAME POPUP ENGINE --- */}
+      {/* RENAME MODAL */}
       {showRenameModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
           <div className="bg-background w-full max-w-xs rounded-2xl p-4 border border-border/80 shadow-2xl space-y-3">
             <h3 className="text-sm font-bold text-foreground">Rename Video</h3>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={newTitleValue}
               onChange={(e) => setNewTitleValue(e.target.value)}
               className="w-full bg-secondary px-3 py-2 text-sm rounded-xl border border-border/40 focus:outline-none focus:border-primary"
@@ -727,8 +647,7 @@ function Index() {
         </div>
       )}
 
-      {/* --- REAL MODAL: PRIVACY FOLDER VIEWER --- */}
-      {/* ✅ FIX 2: Thumbnail ki jagah Lock icon, title ki jagah "Hidden Video" */}
+      {/* PRIVACY FOLDER VIEWER — Lock icon + Hidden title */}
       {showPrivacyModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex flex-col z-50 p-4">
           <div className="flex items-center justify-between border-b border-border/40 pb-3 mb-3">
@@ -746,11 +665,9 @@ function Index() {
             ) : (
               privacyVideosList.map((v, index) => (
                 <div key={`priv-${v.id}`} className="flex items-center gap-3 p-2 bg-secondary/30 rounded-xl">
-                  {/* 🔴 Pehle: <img src={v.thumb} /> — ab Lock icon dikhega */}
                   <div className="h-12 w-20 rounded-lg bg-black/50 border border-white/10 flex items-center justify-center flex-shrink-0">
                     <Lock className="h-5 w-5 text-primary opacity-80" />
                   </div>
-                  {/* 🔴 Pehle: {v.title} — ab "Hidden Video N" dikhega */}
                   <span className="text-xs font-medium truncate flex-1 text-white/40 italic">
                     Hidden Video {index + 1}
                   </span>
@@ -761,7 +678,7 @@ function Index() {
         </div>
       )}
 
-      {/* --- REAL MODAL: STORAGE INFO VIEW --- */}
+      {/* STORAGE INFO MODAL */}
       {showStorageModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-background w-full max-w-xs rounded-2xl p-4 border border-border/80 shadow-2xl space-y-4 text-center">
@@ -779,7 +696,7 @@ function Index() {
         </div>
       )}
 
-      {/* --- REAL MODAL: ALL HISTORY LIST VIEWER --- */}
+      {/* HISTORY MODAL */}
       {showHistoryModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex flex-col z-50 p-4">
           <div className="flex items-center justify-between border-b border-border/40 pb-3 mb-3">
@@ -809,33 +726,27 @@ function Index() {
         </div>
       )}
 
-      {/* BOTTOM ACTION BAR PATTI */}
+      {/* BOTTOM ACTION BAR */}
       {selectMode && (
         <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-md bg-background/95 border-t border-border/60 backdrop-blur-md shadow-2xl z-50 animate-slideUp">
           <div className="flex items-center justify-around py-3 px-2">
             <button onClick={onShare} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
-              <Share2 className="h-5 w-5 mb-1" />
-              <span className="text-[10px] font-medium text-foreground/80">Share</span>
+              <Share2 className="h-5 w-5 mb-1" /><span className="text-[10px] font-medium text-foreground/80">Share</span>
             </button>
             <button onClick={onPrivacySecure} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
-              <Lock className="h-5 w-5 mb-1" />
-              <span className="text-[10px] font-medium text-foreground/80">Privacy</span>
+              <Lock className="h-5 w-5 mb-1" /><span className="text-[10px] font-medium text-foreground/80">Privacy</span>
             </button>
             <button onClick={onDelete} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-destructive disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
-              <Trash2 className="h-5 w-5 mb-1" />
-              <span className="text-[10px] font-medium text-foreground/80">Delete</span>
+              <Trash2 className="h-5 w-5 mb-1" /><span className="text-[10px] font-medium text-foreground/80">Delete</span>
             </button>
             <button onClick={onFileTransfer} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
-              <ArrowRightLeft className="h-5 w-5 mb-1" />
-              <span className="text-[10px] font-medium text-foreground/80">Transfer</span>
+              <ArrowRightLeft className="h-5 w-5 mb-1" /><span className="text-[10px] font-medium text-foreground/80">Transfer</span>
             </button>
             <button onClick={onVideoCut} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
-              <Scissors className="h-5 w-5 mb-1" />
-              <span className="text-[10px] font-medium text-foreground/80">Cut Video</span>
+              <Scissors className="h-5 w-5 mb-1" /><span className="text-[10px] font-medium text-foreground/80">Cut Video</span>
             </button>
             <button onClick={onRename} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
-              <Edit3 className="h-5 w-5 mb-1" />
-              <span className="text-[10px] font-medium text-foreground/80">Rename</span>
+              <Edit3 className="h-5 w-5 mb-1" /><span className="text-[10px] font-medium text-foreground/80">Rename</span>
             </button>
           </div>
         </div>
@@ -870,9 +781,7 @@ function VideoRow({
       if (raw) {
         const parsed: HistoryItem[] = JSON.parse(raw);
         const currentItem = parsed.find(h => h.id === video.id);
-        if (currentItem) {
-          setProgress(currentItem.progress);
-        }
+        if (currentItem) setProgress(currentItem.progress);
       }
     } catch {
       const saved = localStorage.getItem(`history_${video.src}`);
@@ -896,19 +805,13 @@ function VideoRow({
           if (selectMode) onToggle();
           else onOpen();
         }}
-        className={`w-full flex gap-3 items-center p-2 rounded-xl text-left transition-colors ${
-          selected ? "bg-primary/15" : "active:bg-secondary"
-        }`}
+        className={`w-full flex gap-3 items-center p-2 rounded-xl text-left transition-colors ${selected ? "bg-primary/15" : "active:bg-secondary"}`}
       >
         <div className="relative h-20 w-32 overflow-hidden rounded-lg border border-border/60 bg-secondary/70 flex-shrink-0">
           <img src={video.thumb} alt={video.title} className="h-full w-full object-cover" loading="lazy" />
           {selectMode && (
             <div className="absolute top-1.5 left-1.5 bg-black/40 rounded-full p-0.5 backdrop-blur-sm z-10">
-              {selected ? (
-                <CheckCircle2 className="h-4 w-4 text-primary fill-background" />
-              ) : (
-                <Circle className="h-4 w-4 text-white/80" />
-              )}
+              {selected ? <CheckCircle2 className="h-4 w-4 text-primary fill-background" /> : <Circle className="h-4 w-4 text-white/80" />}
             </div>
           )}
           {progress > 2 && (
@@ -927,3 +830,4 @@ function VideoRow({
     </li>
   );
 }
+
