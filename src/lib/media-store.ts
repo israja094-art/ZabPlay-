@@ -7,7 +7,6 @@ import {
   runNativeScan,
   wireAutoRescan,
 } from "./native-scanner";
-// 👑 IMPORTING CAPACITOR NATIVE PLUGINS FOR ACTUAL FILE SHARING
 import { Share } from "@capacitor/share";
 import { Filesystem, Directory } from "@capacitor/filesystem";
 
@@ -22,7 +21,7 @@ type PersistedVideo = {
   duration: string;
   thumb: string;
   file: Blob;
-  folderName?: string; // Naya parameter folder track karne ke liye
+  folderName?: string;
 };
 
 type PersistedSong = {
@@ -36,9 +35,7 @@ type PersistedSong = {
 
 const LS_DELETED_V = "zabplay.deleted.videos";
 const LS_DELETED_S = "zabplay.deleted.songs";
-const LS_PRIVACY_V = "zabplay.privacy.videos"; // Privacy hidden videos storage track
-const LS_RENAMED_V = "zabplay.renamed.videos"; // Custom renamed native/default videos tracker
-const LS_PRIVACY_PIN = "zabplay.privacy.pin"; // 6-digit numeric pin saver
+const LS_RENAMED_V = "zabplay.renamed.videos"; 
 const DB_NAME = "zabplay-media-db";
 const DB_VERSION = 1;
 const VIDEO_STORE = "videos";
@@ -51,7 +48,6 @@ const SONG_COVER_PLACEHOLDER =
   "data:image/svg+xml;charset=UTF-8," +
   encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300"><rect width="300" height="300" rx="28" fill="#111827"/><circle cx="150" cy="150" r="82" fill="#ffffff14"/><circle cx="150" cy="150" r="22" fill="#f8fafc"/><path d="M178 84v90.5a25 25 0 1 1-14-22.5V108l58-11v63.5a25 25 0 1 1-14-22.5V84z" fill="#cbd5e1"/></svg>`);
 
-// Duration Formatting Helper
 const fmtDuration = (sec: number) => {
   if (!isFinite(sec) || sec <= 0) return "00:00";
   const m = Math.floor(sec / 60);
@@ -73,7 +69,6 @@ const saveDeleted = (key: string, s: Set<string>) => {
   localStorage.setItem(key, JSON.stringify([...s]));
 };
 
-// Custom Names Load and Save Loader
 const loadRenamedMap = (): Record<string, string> => {
   if (typeof window === "undefined") return {};
   try {
@@ -85,21 +80,19 @@ const loadRenamedMap = (): Record<string, string> => {
 
 let deletedV = new Set<string>();
 let deletedS = new Set<string>();
-let privacyV = new Set<string>(); // Hidden layout videos state container
-let renamedMap: Record<string, string> = {}; // Video id to custom title map
+let renamedMap: Record<string, string> = {}; 
 let hydratedFromStorage = false;
 let mediaHydrated = false;
 
 const userVideos: Video[] = [];
 const userSongs: Song[] = [];
 
-// Cache map jisse native duration bar bar extract na karna pade performance glitch ke bina
 const nativeDurationCache = new Map<string, { duration: string; thumb?: string }>();
 
 const computeState = (): State => {
   const nv = getNativeVideos().map(video => {
     const cached = nativeDurationCache.get(video.id);
-    const updatedTitle = renamedMap[video.id] || video.title; // Appending renamed names
+    const updatedTitle = renamedMap[video.id] || video.title;
     return cached 
       ? { ...video, title: updatedTitle, duration: cached.duration, thumb: cached.thumb || video.thumb } 
       : { ...video, title: updatedTitle };
@@ -110,9 +103,8 @@ const computeState = (): State => {
     return cached ? { ...song, duration: cached.duration } : song;
   });
 
-  // Base list filter mapping with privacy state filter
   const allVideos = [...nv, ...userVideos, ...defaultVideos].filter(
-    (v) => !deletedV.has(v.id) && !privacyV.has(v.id)
+    (v) => !deletedV.has(v.id)
   );
 
   return {
@@ -129,12 +121,10 @@ const emit = () => {
   listeners.forEach((l) => l());
 };
 
-// Helper delay utility for time-slicing thread chunks
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 let isProbingBackground = false;
 
-// 🔥 SMART BACKGROUND TRAFFIC CONTROLLER PROBER
 const probeNativeMediaBackground = async () => {
   if (isProbingBackground) return;
   isProbingBackground = true;
@@ -142,40 +132,35 @@ const probeNativeMediaBackground = async () => {
   const nv = getNativeVideos();
   const ns = getNativeSongs();
 
-  // 1. Process Videos with Smooth Time-Slicing Breaks
   for (const video of nv) {
     if (!nativeDurationCache.has(video.id) || nativeDurationCache.get(video.id)?.duration === "") {
       try {
         await sleep(300);
-        
         const meta = await probeVideo(video.src);
         if (meta.duration && meta.duration !== "00:00") {
           nativeDurationCache.set(video.id, meta);
           queueMicrotask(() => emit());
         }
       } catch (e) {
-        console.warn("Background video probe skip to avoid lag", e);
+        console.warn("Background video probe skip", e);
       }
     }
   }
 
-  // 2. Process Songs with Smooth Breaks
   for (const song of ns) {
     if (!nativeDurationCache.has(song.id) || nativeDurationCache.get(song.id)?.duration === "") {
       try {
         await sleep(150);
-        
         const d = await probeAudioDuration(song.src);
         if (d && d !== "00:00") {
           nativeDurationCache.set(song.id, { duration: d });
           queueMicrotask(() => emit());
         }
       } catch (e) {
-        console.warn("Background audio probe skip to avoid lag", e);
+        console.warn("Background audio probe skip", e);
       }
     }
   }
-
   isProbingBackground = false;
 };
 
@@ -199,7 +184,6 @@ const openDb = (): Promise<IDBDatabase | null> =>
 const readAll = async <T,>(storeName: string): Promise<T[]> => {
   const db = await openDb();
   if (!db) return [];
-
   return new Promise((resolve) => {
     const tx = db.transaction(storeName, "readonly");
     const request = tx.objectStore(storeName).getAll();
@@ -243,7 +227,7 @@ const hydratePersistedMedia = async () => {
     0,
     userVideos.length,
     ...videos.map((video) => {
-      const updatedTitle = renamedMap[video.id] || video.title; // Appending custom user file name
+      const updatedTitle = renamedMap[video.id] || video.title;
       return {
         id: video.id,
         title: updatedTitle,
@@ -266,7 +250,6 @@ const hydratePersistedMedia = async () => {
       src: URL.createObjectURL(song.file),
     })),
   );
-
   emit();
 };
 
@@ -275,8 +258,7 @@ const subscribe = (l: () => void) => {
     hydratedFromStorage = true;
     deletedV = loadDeleted(LS_DELETED_V);
     deletedS = loadDeleted(LS_DELETED_S);
-    privacyV = loadDeleted(LS_PRIVACY_V); // Loading secure privacy entries
-    renamedMap = loadRenamedMap(); // Loading active custom titles map
+    renamedMap = loadRenamedMap();
     queueMicrotask(() => emit());
     void hydratePersistedMedia();
     
@@ -333,14 +315,11 @@ export const deleteSongs = (ids: string[]) => {
   emit();
 };
 
-// 🔥 REAL WORKING FEATURE: RENAME VIDEOS ENGINE
 export const renameVideoFile = async (id: string, newTitle: string) => {
   if (!newTitle.trim()) return;
-  
   renamedMap[id] = newTitle.trim();
   localStorage.setItem(LS_RENAMED_V, JSON.stringify(renamedMap));
 
-  // Agar user ka manual file imported hai, toh IndexedDB record ko bhi real update karo
   const userIdx = userVideos.findIndex((v) => v.id === id);
   if (userIdx >= 0) {
     userVideos[userIdx].title = newTitle.trim();
@@ -352,48 +331,6 @@ export const renameVideoFile = async (id: string, newTitle: string) => {
     }
   }
   emit();
-};
-
-// 🔥 REAL WORKING FEATURE: HIDE / LOCK IN PRIVACY FOLDER ENGINE
-export const moveVideosToPrivacy = (ids: string[]) => {
-  for (const id of ids) {
-    privacyV.add(id);
-  }
-  saveDeleted(LS_PRIVACY_V, privacyV);
-  emit();
-};
-
-// 🔥 NEW FEATURE: UNLOCK / REMOVE FROM PRIVACY FOLDER
-export const removeVideosFromPrivacy = (ids: string[]) => {
-  for (const id of ids) {
-    privacyV.delete(id);
-  }
-  saveDeleted(LS_PRIVACY_V, privacyV);
-  emit();
-};
-
-// 🔥 REAL WORKING FEATURE: READ ALL HIDDEN PRIVACY VIDEOS DATA
-export const getPrivacyVideos = async (): Promise<Video[]> => {
-  const nv = getNativeVideos().map(video => {
-    const cached = nativeDurationCache.get(video.id);
-    return {
-      ...video,
-      title: renamedMap[video.id] || video.title,
-      duration: cached?.duration || video.duration,
-      thumb: cached?.thumb || video.thumb
-    };
-  });
-  const allMedia = [...nv, ...userVideos, ...defaultVideos];
-  return allMedia.filter(v => privacyV.has(v.id));
-};
-
-// 🔥 NEW PASSWORD FEATURES FOR PRIVACY FUNCTIONALITY
-export const getPrivacyPin = (): string | null => {
-  return localStorage.getItem(LS_PRIVACY_PIN);
-};
-
-export const setPrivacyPin = (pin: string) => {
-  localStorage.setItem(LS_PRIVACY_PIN, pin);
 };
 
 const probeVideo = (url: string): Promise<{ duration: string; thumb: string }> =>
@@ -458,13 +395,12 @@ export const importVideoFiles = async (files: FileList | File[]) => {
     const url = URL.createObjectURL(f);
     const { duration, thumb } = await probeVideo(url);
     
-    // --- IMPORT FOLDER CORRECTION ---
     const video: Video = {
       id,
       title: f.name.replace(/\.[^.]+$/, ""),
       duration,
       thumb: thumb || VIDEO_THUMB_PLACEHOLDER,
-      src: `/Imported Videos/${f.name}`, // Folder categorisation path simulation
+      src: `/Imported Videos/${f.name}`,
     };
     userVideos.unshift(video);
     emit();
@@ -506,17 +442,14 @@ export const importAudioFiles = async (files: FileList | File[]) => {
   }
 };
 
-// 🔥 FIXED SHARE FEATURE: EXTRACTS NATIVE FILE PATH AND FORCES MP4 MIME TYPE FOR ANDROID
 export const shareItems = async (items: { id: string; title: string; src: string }[]) => {
   if (items.length === 0) return;
 
   try {
     const filesToShare: string[] = [];
-
     for (const item of items) {
       if (item.id && item.id.startsWith("nv-")) {
         const rawNativePath = item.id.replace("nv-", "");
-        
         try {
           const fileUriResult = await Filesystem.getUri({
             path: rawNativePath,
@@ -525,7 +458,7 @@ export const shareItems = async (items: { id: string; title: string; src: string
             filesToShare.push(fileUriResult.uri);
           }
         } catch (fsErr) {
-          console.warn("Failed to get native URI via filesystem, trying fallback:", fsErr);
+          console.warn("Failed to get native URI:", fsErr);
           if (rawNativePath.startsWith("file://")) {
             filesToShare.push(rawNativePath);
           }
