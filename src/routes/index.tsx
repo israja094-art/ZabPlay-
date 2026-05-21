@@ -84,6 +84,9 @@ function Index() {
   const [pinMode, setPinMode] = useState<"setup" | "unlock_hide" | "unlock_view">("setup");
   const [inputPin, setInputPin] = useState("");
   const [savedPin, setSavedPin] = useState<string | null>(null);
+  
+  // Keyboard Auto-focus aur Touch binding ke liye ref
+  const pinInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // LocalStorage se saved password check karo
@@ -92,6 +95,15 @@ function Index() {
       setSavedPin(pin);
     }
   }, []);
+
+  // Jab bhi Modal khule, keyboard ko automatic open karne ka logic
+  useEffect(() => {
+    if (showPinModal) {
+      setTimeout(() => {
+        pinInputRef.current?.focus();
+      }, 100);
+    }
+  }, [showPinModal]);
 
   useEffect(() => {
     const loadHistory = () => {
@@ -323,7 +335,7 @@ function Index() {
     }
   };
 
-  // Save the new real name
+  // Save the naya real name
   const saveRenameAction = async () => {
     if (renameTargetId && newTitleValue.trim()) {
       await renameVideoFile(renameTargetId, newTitleValue.trim());
@@ -387,6 +399,7 @@ function Index() {
       } else {
         alert("Incorrect PIN! Please try again.");
         setInputPin("");
+        pinInputRef.current?.focus();
       }
     } else if (pinMode === "unlock_view") {
       if (inputPin === savedPin) {
@@ -397,6 +410,7 @@ function Index() {
       } else {
         alert("Incorrect PIN! Please try again.");
         setInputPin("");
+        pinInputRef.current?.focus();
       }
     }
   };
@@ -635,20 +649,52 @@ function Index() {
                   : "Please verification code to continue"}
               </p>
             </div>
+            
+            {/* Real Hidden Input Engine for keyboard bridge */}
             <input 
-              type="password" 
+              ref={pinInputRef}
+              type="text" 
               maxLength={4}
               pattern="[0-9]*"
               inputMode="numeric"
               value={inputPin}
               onChange={(e) => setInputPin(e.target.value.replace(/\D/g, ""))}
-              placeholder="••••"
-              className="w-32 mx-auto text-center tracking-[1em] text-lg font-bold bg-secondary px-3 py-2 rounded-xl border border-border/40 focus:outline-none focus:border-primary"
+              className="absolute opacity-0 w-1 h-1 pointer-events-none"
               autoFocus
             />
+
+            {/* Custom Interactive UI Grid Boxes that show typing dots live */}
+            <div 
+              onClick={() => pinInputRef.current?.focus()}
+              className="flex justify-center items-center gap-3 py-2 cursor-pointer"
+            >
+              {[0, 1, 2, 3].map((index) => (
+                <div 
+                  key={index} 
+                  className={`w-10 h-12 rounded-xl border flex items-center justify-center text-lg font-bold transition-all ${
+                    inputPin.length === index 
+                      ? "border-primary bg-primary/5 shadow-md" 
+                      : "border-border/60 bg-secondary/50"
+                  }`}
+                >
+                  {inputPin.length > index ? (
+                    <span className="text-foreground text-xl leading-none">●</span>
+                  ) : (
+                    <span className="text-muted-foreground/30 text-sm">○</span>
+                  )}
+                </div>
+              ))}
+            </div>
+
             <div className="flex gap-2 text-xs font-semibold pt-2">
               <button onClick={() => setShowPinModal(false)} className="flex-1 py-2 rounded-xl bg-secondary text-foreground">Cancel</button>
-              <button onClick={handlePinSubmit} className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground">Confirm</button>
+              <button 
+                onClick={handlePinSubmit} 
+                disabled={inputPin.length !== 4}
+                className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground disabled:opacity-40"
+              >
+                Confirm
+              </button>
             </div>
           </div>
         </div>
@@ -876,4 +922,3 @@ function VideoRow({
     </li>
   );
 }
-
