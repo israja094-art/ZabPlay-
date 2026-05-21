@@ -98,7 +98,7 @@ function Index() {
     if (showPinModal) {
       setTimeout(() => {
         pinInputRef.current?.focus();
-      }, 200); // Thoda delay taaki Android keyboard smooth khule
+      }, 200);
     }
   }, [showPinModal]);
 
@@ -310,9 +310,13 @@ function Index() {
     setShowPinModal(true);
   };
 
+  // ✅ FIX 3: moveVideosToPrivacy ke baad deleteVideos bhi call karo
+  // taaki video main list se bhi hat jaye
   const executePrivacyLock = () => {
-    moveVideosToPrivacy([...selected]);
-    alert(`${selected.size} Video(s) successfully locked in Privacy Folder!`);
+    const selectedIds = [...selected];
+    moveVideosToPrivacy(selectedIds);
+    deleteVideos(selectedIds); // 🔴 Yeh line pehle missing thi — ab main list se bhi hatega
+    alert(`${selectedIds.length} Video(s) successfully locked in Privacy Folder!`);
     exitSelect();
   };
 
@@ -380,13 +384,15 @@ function Index() {
       document.activeElement.blur();
     }
 
+    // ✅ FIX 1: PIN setup ke baad executePrivacyLock() bhi call karo
+    // Pehle sirf PIN save hota tha, videos lock nahi hote the
     if (pinMode === "setup") {
       localStorage.setItem("zabplay_privacy_pin", inputPin);
       setSavedPin(inputPin);
       setShowPinModal(false);
       setTimeout(() => {
-        alert("Privacy PIN successfully set!");
-      }, 100);
+        executePrivacyLock(); // 🔴 Yeh line pehle missing thi
+      }, 150);
 
     } else if (pinMode === "unlock_hide") {
       if (inputPin === savedPin) {
@@ -624,7 +630,7 @@ function Index() {
             className="bg-[#0b1220] w-[290px] rounded-[24px] p-6 border border-white/10 shadow-2xl text-center relative space-y-5"
             onClick={(e) => {
               e.stopPropagation();
-              pinInputRef.current?.focus(); // Pura box clickable hai taaki input par hi focus rahe
+              pinInputRef.current?.focus();
             }}
           >
             <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
@@ -641,7 +647,6 @@ function Index() {
               </p>
             </div>
             
-            {/* Real Input Layer - Focus aur typing hamesha trigger karega */}
             <div className="relative w-full max-w-[210px] mx-auto h-12 mt-2">
               <input 
                 ref={pinInputRef}
@@ -651,12 +656,10 @@ function Index() {
                 inputMode="numeric"
                 value={inputPin}
                 onChange={(e) => setInputPin(e.target.value.replace(/\D/g, ""))}
-                // Pure area par failaya taaki touch bilkul block na ho aur cursor blink kare
                 className="absolute inset-0 w-full h-full opacity-100 bg-transparent text-white text-center text-2xl tracking-[26px] pl-5 focus:outline-none z-50 font-bold"
                 autoFocus
               />
 
-              {/* Box Borders Design Layer - Background me set kiya hai fallback ke liye */}
               <div className="absolute inset-0 flex justify-between items-center gap-3 z-0 pointer-events-none">
                 {[0, 1, 2, 3].map((index) => {
                   const isFocused = inputPin.length === index;
@@ -677,12 +680,11 @@ function Index() {
               </div>
             </div>
 
-            {/* Flat Buttons Layout - e.stopPropagation lagaya hai taaki modal background click isko dismiss na kare */}
             <div className="flex gap-3 text-xs font-semibold pt-2 relative z-50">
               <button 
                 type="button"
                 onClick={(e) => {
-                  e.stopPropagation(); // Infinite focus loop ko break karne ke liye
+                  e.stopPropagation();
                   setInputPin("");
                   setShowPinModal(false);
                 }} 
@@ -726,6 +728,7 @@ function Index() {
       )}
 
       {/* --- REAL MODAL: PRIVACY FOLDER VIEWER --- */}
+      {/* ✅ FIX 2: Thumbnail ki jagah Lock icon, title ki jagah "Hidden Video" */}
       {showPrivacyModal && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex flex-col z-50 p-4">
           <div className="flex items-center justify-between border-b border-border/40 pb-3 mb-3">
@@ -741,10 +744,16 @@ function Index() {
             {privacyVideosList.length === 0 ? (
               <p className="text-center text-xs text-muted-foreground mt-10">No videos inside secure privacy folder.</p>
             ) : (
-              privacyVideosList.map(v => (
+              privacyVideosList.map((v, index) => (
                 <div key={`priv-${v.id}`} className="flex items-center gap-3 p-2 bg-secondary/30 rounded-xl">
-                  <img src={v.thumb} className="h-12 w-20 object-cover rounded-lg" />
-                  <span className="text-xs font-medium truncate flex-1">{v.title}</span>
+                  {/* 🔴 Pehle: <img src={v.thumb} /> — ab Lock icon dikhega */}
+                  <div className="h-12 w-20 rounded-lg bg-black/50 border border-white/10 flex items-center justify-center flex-shrink-0">
+                    <Lock className="h-5 w-5 text-primary opacity-80" />
+                  </div>
+                  {/* 🔴 Pehle: {v.title} — ab "Hidden Video N" dikhega */}
+                  <span className="text-xs font-medium truncate flex-1 text-white/40 italic">
+                    Hidden Video {index + 1}
+                  </span>
                 </div>
               ))
             )}
@@ -918,4 +927,3 @@ function VideoRow({
     </li>
   );
 }
-
