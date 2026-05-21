@@ -308,9 +308,12 @@ export const deleteVideos = async (ids: string[]) => {
   for (const id of ids) {
     // 1. Check native storage prefix ("nv-") to trigger real phone file deletion
     if (id.startsWith("nv-")) {
-      const rawFilePath = id.replace("nv-", ""); // Extracting original system absolute path
+      // Extract original system absolute path cleanly by removing prefix layers
+      let rawFilePath = id.replace("nv-", ""); 
+      rawFilePath = rawFilePath.replace(/^file:\/\//, "").replace(/^_capacitor_file_/, "");
+
       try {
-        // Real-time phone storage se delete karega
+        // Real-time phone storage se hardware track clear karega
         await Filesystem.deleteFile({
           path: rawFilePath
         });
@@ -568,3 +571,4 @@ export const shareItems = async (items: { id: string; title: string; src: string
     console.error("Error while handling capacitor native sharing:", error);
   }
 };
+
