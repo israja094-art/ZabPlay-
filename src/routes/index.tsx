@@ -79,6 +79,20 @@ function Index() {
   const [showStorageModal, setShowStorageModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
 
+  // --- 🔐 NEW SECURITY PASSWORD SYSTEM STATES ---
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinMode, setPinMode] = useState<"setup" | "unlock_hide" | "unlock_view">("setup");
+  const [inputPin, setInputPin] = useState("");
+  const [savedPin, setSavedPin] = useState<string | null>(null);
+
+  useEffect(() => {
+    // LocalStorage se saved password check karo
+    const pin = localStorage.getItem("zabplay_privacy_pin");
+    if (pin) {
+      setSavedPin(pin);
+    }
+  }, []);
+
   useEffect(() => {
     const loadHistory = () => {
       try {
@@ -268,7 +282,7 @@ function Index() {
     }
   };
 
-  // 🔥 REAL SHARE FUNCTION (FIXED: Added id parameter so real mp4 file shares instead of text)
+  // 🔥 REAL SHARE FUNCTION
   const onShare = () => {
     const items = videos
       .filter((v) => selected.has(v.id))
@@ -278,9 +292,20 @@ function Index() {
     exitSelect();
   };
 
-  // 🔥 REAL PRIVACY HIDE FUNCTION
+  // 🔥 REAL PRIVACY HIDE FUNCTION TRIGGER WITH PIN VALIDATION
   const onPrivacySecure = () => {
     if (selected.size === 0) return;
+    setInputPin("");
+    if (!savedPin) {
+      setPinMode("setup");
+    } else {
+      setPinMode("unlock_hide");
+    }
+    setShowPinModal(true);
+  };
+
+  // Actual process of locking after PIN is verified
+  const executePrivacyLock = () => {
     moveVideosToPrivacy([...selected]);
     alert(`${selected.size} Video(s) successfully locked in Privacy Folder!`);
     exitSelect();
@@ -307,7 +332,7 @@ function Index() {
     }
   };
 
-  // ⚠️ IGNORED FEATURES KEEPING ONLY DEFAULT ALERTS (As you requested)
+  // ⚠️ IGNORED FEATURES KEEPING ONLY DEFAULT ALERTS
   const onFileTransfer = () => {
     if (selected.size === 0) return;
     alert(`Transferring ${selected.size} video file(s)...`);
@@ -320,7 +345,7 @@ function Index() {
     exitSelect();
   };
 
-  // --- 👑 THREE-DOT REAL ACTIONS MANAGER ---
+  // --- 👑 THREE-DOT REAL ACTIONS MANAGER WITH SECURITY TRIGGER ---
   const handleDropdownAction = async (actionName: string) => {
     if (actionName === "Settings") {
       alert(`Opening feature: ${actionName}`);
@@ -333,9 +358,46 @@ function Index() {
     } else if (actionName === "History") {
       setShowHistoryModal(true);
     } else if (actionName === "Privacy Folder") {
-      const data = await getPrivacyVideos();
-      setPrivacyVideosList(data);
-      setShowPrivacyModal(true);
+      setInputPin("");
+      if (!savedPin) {
+        setPinMode("setup");
+      } else {
+        setPinMode("unlock_view");
+      }
+      setShowPinModal(true);
+    }
+  };
+
+  // --- 🔐 PIN SUBMIT HANDLER SYSTEM ---
+  const handlePinSubmit = async () => {
+    if (inputPin.length !== 4) {
+      alert("Please enter a valid 4-digit PIN.");
+      return;
+    }
+
+    if (pinMode === "setup") {
+      localStorage.setItem("zabplay_privacy_pin", inputPin);
+      setSavedPin(inputPin);
+      alert("Privacy PIN successfully set!");
+      setShowPinModal(false);
+    } else if (pinMode === "unlock_hide") {
+      if (inputPin === savedPin) {
+        setShowPinModal(false);
+        executePrivacyLock();
+      } else {
+        alert("Incorrect PIN! Please try again.");
+        setInputPin("");
+      }
+    } else if (pinMode === "unlock_view") {
+      if (inputPin === savedPin) {
+        setShowPinModal(false);
+        const data = await getPrivacyVideos();
+        setPrivacyVideosList(data);
+        setShowPrivacyModal(true);
+      } else {
+        alert("Incorrect PIN! Please try again.");
+        setInputPin("");
+      }
     }
   };
 
@@ -554,6 +616,42 @@ function Index() {
         </div>
       ) : (
         contentLayout
+      )}
+
+      {/* --- 🔐 REAL MODAL: PRIVACY PIN SETUP & UNLOCK ENGINE --- */}
+      {showPinModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-background w-full max-w-xs rounded-2xl p-5 border border-border/80 shadow-2xl space-y-4 text-center">
+            <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mx-auto">
+              <Lock className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-foreground">
+                {pinMode === "setup" ? "Set Privacy Password" : "Enter Privacy PIN"}
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                {pinMode === "setup" 
+                  ? "Create a 4-digit PIN to secure your hidden videos" 
+                  : "Please verification code to continue"}
+              </p>
+            </div>
+            <input 
+              type="password" 
+              maxLength={4}
+              pattern="[0-9]*"
+              inputMode="numeric"
+              value={inputPin}
+              onChange={(e) => setInputPin(e.target.value.replace(/\D/g, ""))}
+              placeholder="••••"
+              className="w-32 mx-auto text-center tracking-[1em] text-lg font-bold bg-secondary px-3 py-2 rounded-xl border border-border/40 focus:outline-none focus:border-primary"
+              autoFocus
+            />
+            <div className="flex gap-2 text-xs font-semibold pt-2">
+              <button onClick={() => setShowPinModal(false)} className="flex-1 py-2 rounded-xl bg-secondary text-foreground">Cancel</button>
+              <button onClick={handlePinSubmit} className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground">Confirm</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* --- REAL MODAL: RENAME POPUP ENGINE --- */}
@@ -778,3 +876,4 @@ function VideoRow({
     </li>
   );
 }
+
