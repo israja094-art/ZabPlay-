@@ -716,20 +716,37 @@ function Index() {
         </div>
       )}
 
-      {/* --- REAL MODAL: RENAME POPUP ENGINE --- */}
+            {/* --- FIXED REAL MODAL: RENAME POPUP ENGINE --- */}
       {showRenameModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-background w-full max-w-xs rounded-2xl p-4 border border-border/80 shadow-2xl space-y-3">
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-[99999] pointer-events-auto animate-fadeIn"
+          onClick={() => setShowRenameModal(false)}
+        >
+          <div 
+            className="bg-background w-full max-w-xs rounded-2xl p-6 border border-border/80 shadow-2xl space-y-4 pointer-events-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <h3 className="text-sm font-bold text-foreground">Rename Video</h3>
             <input 
               type="text" 
               value={newTitleValue}
               onChange={(e) => setNewTitleValue(e.target.value)}
-              className="w-full bg-secondary px-3 py-2 text-sm rounded-xl border border-border/40 focus:outline-none focus:border-primary"
+              className="w-full bg-secondary px-3 py-2 text-sm rounded-xl border border-border/40 focus:outline-none focus:border-primary text-foreground"
+              autoFocus
             />
-            <div className="flex gap-2 justify-end text-xs font-semibold">
-              <button onClick={() => setShowRenameModal(false)} className="px-3 py-2 rounded-lg bg-secondary text-foreground">Cancel</button>
-              <button onClick={saveRenameAction} className="px-3 py-2 rounded-lg bg-primary text-primary-foreground">Save</button>
+            <div className="flex gap-3 justify-end text-xs font-semibold">
+              <button 
+                onClick={() => setShowRenameModal(false)} 
+                className="px-4 py-2 rounded-xl bg-secondary text-foreground active:scale-95"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={saveRenameAction} 
+                className="px-4 py-2 rounded-xl bg-primary text-primary-foreground active:scale-95"
+              >
+                Save
+              </button>
             </div>
           </div>
         </div>
