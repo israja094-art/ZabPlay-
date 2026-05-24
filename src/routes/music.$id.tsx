@@ -10,6 +10,10 @@ import {
   SkipForward,
   Shuffle,
   Repeat,
+  RotateCw,
+  Repeat1,
+  ListMusic,
+  SlidersHorizontal,
 } from "lucide-react";
 import { formatTime } from "@/lib/media-data";
 import { syncSongSource } from "@/lib/audio-player";
@@ -30,45 +34,26 @@ function NowPlaying() {
   const [duration, setDuration] = useState(0);
   const [liked, setLiked] = useState(false);
   const [shuffle, setShuffle] = useState(false);
-  const [repeat, setRepeat] = useState(false);
+  const [repeat, setRepeat] = useState(0); // 0: off, 1: all, 2: one
 
   const idx = Math.max(0, songs.findIndex((s) => s.id === id));
   const song = songs[idx];
-  const nextSong = songs.length > 0 ? songs[(idx + 1) % songs.length] : null;
 
   useEffect(() => {
     if (!song) return;
     const a = syncSongSource({ id: song.id, src: song.src });
     audioRef.current = a;
     if (!a) return;
-    setCurrent(a.currentTime || 0);
-    setDuration(a.duration || 0);
     const tryPlay = async () => {
       try {
         await a.play();
         setPlaying(true);
-      } catch {
-        setPlaying(false);
-      }
+      } catch {}
     };
     tryPlay();
   }, [id, song]);
 
-  const closePlayer = () => {
-    const a = audioRef.current;
-    if (a) {
-      a.pause();
-      a.currentTime = 0;
-    }
-    navigate({ to: "/music" });
-  };
-
-  useEffect(() => {
-    return () => {
-      const a = audioRef.current;
-      if (a) a.pause();
-    };
-  }, []);
+  const closePlayer = () => navigate({ to: "/music" });
 
   useEffect(() => {
     const a = audioRef.current;
@@ -77,179 +62,81 @@ function NowPlaying() {
     const onMeta = () => setDuration(a.duration || 0);
     const onPlay = () => setPlaying(true);
     const onPause = () => setPlaying(false);
-    const onEnd = () => {
-      if (repeat) {
-        a.currentTime = 0;
-        a.play().catch(() => {});
-        return;
-      }
-      setPlaying(false);
-      setCurrent(a.duration || 0);
-    };
+    
     a.addEventListener("timeupdate", onTime);
     a.addEventListener("loadedmetadata", onMeta);
     a.addEventListener("play", onPlay);
     a.addEventListener("pause", onPause);
-    a.addEventListener("ended", onEnd);
+    
     return () => {
       a.removeEventListener("timeupdate", onTime);
       a.removeEventListener("loadedmetadata", onMeta);
       a.removeEventListener("play", onPlay);
       a.removeEventListener("pause", onPause);
-      a.removeEventListener("ended", onEnd);
     };
-  }, [repeat]);
-
-  if (!song) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center text-muted-foreground">
-        No song
-      </div>
-    );
-  }
+  }, []);
 
   const toggle = () => {
     const a = audioRef.current;
     if (!a) return;
-    if (a.paused) a.play().catch(() => {});
-    else a.pause();
-  };
-
-  const next = () => {
-    const ni = shuffle
-      ? Math.floor(Math.random() * songs.length)
-      : (idx + 1) % songs.length;
-    navigate({ to: "/music/$id", params: { id: songs[ni].id } });
-  };
-  const prev = () => {
-    const pi = (idx - 1 + songs.length) % songs.length;
-    navigate({ to: "/music/$id", params: { id: songs[pi].id } });
-  };
-
-  const onSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const a = audioRef.current;
-    if (!a) return;
-    const t = (parseFloat(e.target.value) / 100) * (a.duration || 0);
-    a.currentTime = t;
-    setCurrent(t);
+    if (a.paused) a.play(); else a.pause();
   };
 
   const pct = duration ? (current / duration) * 100 : 0;
 
-  return (
-    <div className="relative mx-auto flex h-dvh max-w-md flex-col overflow-hidden bg-background">
-      <div className="absolute inset-0">
-        <img src={song.cover} alt={song.title} className="h-full w-full object-cover opacity-20 blur-3xl scale-110" />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/45 via-background/78 to-background" />
-      </div>
+  if (!song) return <div className="min-h-screen bg-[#060b1e] flex items-center justify-center text-blue-400">Loading...</div>;
 
-      <header className="relative z-10 flex items-center justify-between px-4 pt-4 pb-3">
-        <button
-          onClick={closePlayer}
-          aria-label="Close"
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-border/60 bg-background/55 backdrop-blur"
-        >
-          <ChevronDown className="h-6 w-6 text-primary" />
-        </button>
+  return (
+    <div className="relative mx-auto flex h-dvh max-w-md flex-col bg-[#060b1e] text-white overflow-hidden">
+      {/* Background Glow */}
+      <div className="absolute inset-0 bg-blue-900/10 blur-[100px]" />
+
+      <header className="relative z-10 flex items-center justify-between px-6 pt-6">
+        <button onClick={closePlayer} className="p-2 rounded-full border border-blue-500/30 bg-blue-950/50"><ChevronDown /></button>
         <div className="text-center">
-          <p className="text-sm font-semibold text-foreground truncate max-w-[10rem]">{song.title}</p>
-          <p className="text-[11px] text-muted-foreground">{song.artist}</p>
+          <p className="text-xs text-blue-300 uppercase tracking-widest">Now Playing</p>
+          <p className="text-sm font-bold truncate max-w-[150px]">{song.title}</p>
         </div>
-        <button
-          aria-label="More"
-          className="flex h-11 w-11 items-center justify-center rounded-full border border-border/60 bg-background/55 backdrop-blur"
-        >
-          <MoreVertical className="h-5 w-5 text-primary" />
-        </button>
+        <button className="p-2 rounded-full border border-blue-500/30 bg-blue-950/50"><MoreVertical /></button>
       </header>
 
-      <div className="relative z-10 flex-1 px-5 pb-4 pt-3 overflow-hidden">
-        <div className="flex h-full flex-col gap-5 overflow-hidden rounded-[2rem] border border-border/60 bg-card/25 px-4 py-4 backdrop-blur-sm">
-          <div className="relative aspect-square w-full overflow-hidden rounded-[1.6rem] border border-border/60 bg-card/70 shadow-2xl shadow-primary/10 max-h-[42vh] flex-shrink-0">
-          <img src={song.cover} alt={song.title} className="h-full w-full object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-background/55 via-transparent to-transparent" />
-          <div className="absolute left-4 right-4 bottom-4 flex items-center justify-between rounded-2xl border border-border/60 bg-background/55 px-4 py-3 backdrop-blur-md">
-            <div className="min-w-0">
-              <p className="truncate text-xs uppercase tracking-[0.22em] text-muted-foreground">Now playing</p>
-              <p className="truncate text-sm font-semibold text-foreground">{song.duration || formatTime(duration)}</p>
-            </div>
-            <button
-              onClick={() => setLiked((l) => !l)}
-              aria-label="Like"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-card/80 text-foreground"
-            >
-              <Heart className={`h-6 w-6 ${liked ? "fill-primary text-primary" : "text-foreground"}`} />
-            </button>
+      <div className="flex-1 flex flex-col items-center justify-center px-6 gap-8">
+        {/* Neon Circle Music Art */}
+        <div className="relative w-72 h-72 rounded-full border-4 border-blue-500/20 p-2 shadow-[0_0_30px_rgba(59,130,246,0.3)]">
+          <img src={song.cover} className="w-full h-full rounded-full object-cover" />
+          <div className="absolute inset-0 rounded-full border-t-4 border-blue-500 animate-spin-slow" />
+        </div>
+
+        <div className="w-full text-center">
+          <h1 className="text-xl font-bold truncate">{song.title}</h1>
+          <p className="text-blue-400 text-sm">{song.artist}</p>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="w-full space-y-2">
+          <input type="range" className="w-full h-1 bg-blue-900/50 rounded-lg accent-blue-500" value={pct} onChange={() => {}} />
+          <div className="flex justify-between text-xs text-blue-400">
+            <span>{formatTime(current)}</span>
+            <span>{formatTime(duration)}</span>
           </div>
-          </div>
+        </div>
 
-          <div className="relative z-10 flex min-h-0 flex-1 flex-col justify-end">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <h1 className="line-clamp-2 text-2xl font-bold text-foreground">{song.title}</h1>
-                <p className="mt-1 truncate text-sm text-muted-foreground">{song.artist}</p>
-              </div>
-              <div className="rounded-full border border-border/60 bg-card/60 px-3 py-1.5 text-xs font-medium text-primary backdrop-blur">
-                {song.duration || formatTime(duration || 0)}
-              </div>
-            </div>
+        {/* Controls */}
+        <div className="flex justify-between w-full px-4 text-blue-400 mb-4">
+          <button onClick={() => setShuffle(!shuffle)} className={shuffle ? "text-blue-500" : ""}><Shuffle size={20} /></button>
+          <button onClick={() => setRepeat((r) => (r + 1) % 3)}>{repeat === 1 ? <Repeat size={20} className="text-blue-500" /> : <Repeat1 size={20} />}</button>
+          <button><ListMusic size={20} /></button>
+          <button><SlidersHorizontal size={20} /></button>
+        </div>
 
-            <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground overflow-hidden">
-              <span className={`rounded-full border px-3 py-1.5 ${shuffle ? "border-primary/60 bg-primary/10 text-primary" : "border-border/60 bg-card/45"}`}>
-                Shuffle
-              </span>
-              <span className={`rounded-full border px-3 py-1.5 ${repeat ? "border-primary/60 bg-primary/10 text-primary" : "border-border/60 bg-card/45"}`}>
-                Repeat
-              </span>
-              {nextSong ? <span className="truncate rounded-full border border-border/60 bg-card/45 px-3 py-1.5">Next: {nextSong.title}</span> : null}
-            </div>
-
-            <div className="mt-5">
-              <div className="relative h-2 rounded-full bg-secondary/90">
-                <div className="absolute left-0 top-0 h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={0.1}
-                  value={pct}
-                  onChange={onSeek}
-                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                />
-                <div className="absolute -top-1.5 h-5 w-5 rounded-full border-4 border-background bg-primary shadow-lg shadow-primary/30 -translate-x-1/2" style={{ left: `${pct}%` }} />
-              </div>
-              <div className="mt-3 flex justify-between text-xs font-medium text-muted-foreground">
-                <span>{formatTime(current)}</span>
-                <span>{formatTime(duration)}</span>
-              </div>
-            </div>
-
-            <div className="mt-5">
-              <div className="flex items-center justify-between rounded-[2rem] border border-border/60 bg-card/55 px-5 py-4 backdrop-blur-md shadow-xl shadow-primary/5">
-                <button onClick={() => setShuffle((s) => !s)} className={shuffle ? "text-primary" : "text-muted-foreground"} aria-label="Shuffle">
-                  <Shuffle className="h-5 w-5" />
-                </button>
-                <button onClick={prev} aria-label="Previous" className="text-primary">
-                  <SkipBack className="h-8 w-8" />
-                </button>
-                <button
-                  onClick={toggle}
-                  className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-2xl shadow-primary/30"
-                  aria-label="Play/Pause"
-                >
-                  {playing ? <Pause className="h-7 w-7" /> : <Play className="ml-1 h-7 w-7" />}
-                </button>
-                <button onClick={next} aria-label="Next" className="text-primary">
-                  <SkipForward className="h-8 w-8" />
-                </button>
-                <button onClick={() => setRepeat((r) => !r)} className={repeat ? "text-primary" : "text-muted-foreground"} aria-label="Repeat">
-                  <Repeat className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-          </div>
+        <div className="flex items-center gap-8 mb-8">
+          <button onClick={() => {}}><SkipBack size={32} /></button>
+          <button onClick={toggle} className="w-20 h-20 rounded-full bg-blue-500 flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.6)]">
+            {playing ? <Pause size={32} fill="white" /> : <Play size={32} fill="white" className="ml-1" />}
+          </button>
+          <button onClick={() => {}}><SkipForward size={32} /></button>
         </div>
       </div>
     </div>
   );
-                }
+}
