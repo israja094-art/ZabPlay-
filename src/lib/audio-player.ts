@@ -1,3 +1,5 @@
+import { setCurrentSong, setPlayingState } from "@/lib/media-store";
+
 type AudioSong = {
   id: string;
   src: string;
@@ -18,6 +20,11 @@ export const getSharedAudio = () => {
     sharedAudio.preload = "metadata";
     sharedAudio.crossOrigin = "anonymous";
     sharedAudio.setAttribute("playsinline", "true");
+
+    // --- MINI-PLAYER SYNC LISTENERS ---
+    sharedAudio.addEventListener("play", () => setPlayingState(true));
+    sharedAudio.addEventListener("pause", () => setPlayingState(false));
+    sharedAudio.addEventListener("ended", () => setPlayingState(false));
   }
   return sharedAudio;
 };
@@ -35,6 +42,8 @@ export const syncSongSource = (song: AudioSong) => {
     audio.src = song.src;
     audio.load();
     activeSongId = song.id;
+    // --- MINI-PLAYER SYNC ---
+    setCurrentSong(song.id); 
   }
 
   return audio;
@@ -47,3 +56,4 @@ export const playSongNow = (song: AudioSong) => {
 };
 
 export const getActiveSongId = () => activeSongId;
+
