@@ -74,6 +74,7 @@ function MusicPage() {
   const allSelected = list.length > 0 && list.every((s) => selected.has(s.id));
 
   return (
+    // Background dark blue set kiya hai jaisa photo mein hai
     <div className="min-h-screen bg-[#060b1e] text-white mx-auto max-w-md pb-24">
       <input
         ref={fileRef}
@@ -87,43 +88,27 @@ function MusicPage() {
         }}
       />
 
+      {/* Sticky header design */}
       <div className="px-4 pt-5 pb-3 space-y-4 sticky top-0 bg-[#060b1e]/90 backdrop-blur-lg z-30 border-b border-blue-500/30">
         {selectMode ? (
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <button onClick={exitSelect} className="p-2 -ml-2" aria-label="Close">
-                <X className="h-5 w-5" />
-              </button>
+              <button onClick={exitSelect} className="p-2 -ml-2"><X className="h-5 w-5" /></button>
               <span className="text-base font-semibold">{selected.size} selected</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setSelected(allSelected ? new Set() : new Set(list.map((s) => s.id)))}
-                className="text-xs px-3 py-1 rounded-full bg-blue-600/20 border border-blue-500"
-              >
-                {allSelected ? "Clear" : "All"}
-              </button>
-              <button onClick={onShare} className="p-2" aria-label="Share">
-                <Share2 className="h-5 w-5 text-blue-400" />
-              </button>
-              <button onClick={onDelete} className="p-2 text-red-400" aria-label="Delete">
-                <Trash2 className="h-5 w-5" />
-              </button>
             </div>
           </div>
         ) : (
           <div className="flex items-center justify-between">
             <Logo />
-            <div className="flex items-center gap-1 -mr-2">
+            <div className="flex items-center gap-1">
               <button onClick={() => fileRef.current?.click()} className="p-2 text-blue-400"><FolderPlus className="h-5 w-5" /></button>
-              <button onClick={() => setSelectMode(true)} className="p-2 text-blue-400"><CheckCircle2 className="h-5 w-5" /></button>
             </div>
           </div>
         )}
         <SearchBar value={q} onChange={setQ} placeholder="Search music..." />
       </div>
 
-      <ul className="px-4 pt-4 space-y-3">
+      <ul className="px-3 pt-3 space-y-2">
         {list.map((s) => (
           <SongRow
             key={s.id}
@@ -149,30 +134,22 @@ function SongRow({ song, selectMode, selected, onOpen, onToggle, onLongPress }: 
   const { didTrigger, ...pressHandlers } = useLongPress(onLongPress, 450);
   return (
     <li className="relative group">
-      <div className="absolute inset-0 bg-blue-500/10 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+      {/* Neon glowing border effect */}
+      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-blue-500/0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" />
       <button
         {...pressHandlers}
-        onClick={() => {
-          if (didTrigger()) return;
-          if (selectMode) onToggle();
-          else onOpen();
-        }}
-        className={`w-full flex items-center gap-4 px-3 py-3 rounded-2xl border ${
+        onClick={() => { if (didTrigger()) return; if (selectMode) onToggle(); else onOpen(); }}
+        className={`w-full flex items-center gap-4 px-3 py-3 rounded-xl border ${
           selected ? "border-blue-500 bg-blue-500/20" : "border-blue-500/20 bg-[#0b1229]"
         }`}
       >
-        <div className="w-12 h-12 rounded-xl bg-blue-900/30 flex items-center justify-center border border-blue-500/30">
+        <div className="w-12 h-12 rounded-lg bg-blue-900/30 flex items-center justify-center border border-blue-500/30">
           <Music className="w-6 h-6 text-blue-400" />
         </div>
-        <div className="flex-1 min-w-0 text-left">
+        <div className="flex-1 text-left">
           <p className="text-sm font-semibold truncate">{song.title}</p>
-          <p className="text-[10px] text-blue-300/70 uppercase tracking-wider">Device audio</p>
+          <p className="text-[10px] text-blue-300/70 uppercase">Device audio</p>
         </div>
-        {selectMode && (
-          <div className="text-blue-500">
-            {selected ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5 opacity-50" />}
-          </div>
-        )}
       </button>
     </li>
   );
