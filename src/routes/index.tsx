@@ -203,10 +203,10 @@ function Index() {
       contentLayout = (
         <div className="space-y-2">
           <div className="px-4 py-2 flex items-center justify-between bg-zinc-900 border-b border-zinc-800">
-            <span className="text-sm font-semibold text-white truncate">Folder: {currentFolder}</span>
+            <span className="text-sm font-semibold text-blue-400 truncate">Folder: {currentFolder}</span>
             <button 
               onClick={() => setCurrentFolder(null)}
-              className="text-xs bg-zinc-800 text-white px-2 py-1 rounded-md font-medium border border-zinc-700"
+              className="text-xs bg-zinc-850 text-blue-400 px-2 py-1 rounded-md font-medium border border-zinc-700 active:bg-zinc-800"
             >
               Back to Folders
             </button>
@@ -234,7 +234,7 @@ function Index() {
       const folderNames = Object.keys(foldersMap);
       if (folderNames.length === 0) {
         contentLayout = (
-          <div className="px-6 py-16 text-center text-zinc-400 text-sm">No folders found.</div>
+          <div className="px-6 py-16 text-center text-zinc-500 text-sm">No folders found.</div>
         );
       } else {
         contentLayout = (
@@ -246,15 +246,15 @@ function Index() {
                   if (selectMode) return;
                   setCurrentFolder(name);
                 }}
-                className="flex flex-col items-center justify-center p-4 rounded-xl border border-zinc-800 bg-zinc-900 active:bg-zinc-800 transition-all text-center gap-2"
+                className="flex flex-col items-center justify-center p-4 rounded-xl border border-zinc-900 bg-zinc-950 active:bg-zinc-900 transition-all text-center gap-2"
               >
-                <div className="relative p-3 bg-zinc-800 rounded-xl text-white">
-                  <Folder className="h-8 w-8 fill-white/10" />
-                  <span className="absolute -top-1 -right-1 bg-white text-black text-[10px] px-1.5 min-w-[18px] h-4 flex items-center justify-center rounded-full font-bold">
+                <div className="relative p-3 bg-zinc-900 rounded-xl text-blue-400">
+                  <Folder className="h-8 w-8 fill-blue-500/10 text-blue-400" />
+                  <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] px-1.5 min-w-[18px] h-4 flex items-center justify-center rounded-full font-bold">
                     {foldersMap[name].length}
                   </span>
                 </div>
-                <span className="text-sm font-medium text-white line-clamp-1 w-full px-1">
+                <span className="text-sm font-medium text-blue-400 line-clamp-1 w-full px-1">
                   {name}
                 </span>
               </button>
@@ -544,9 +544,9 @@ function Index() {
           </div>
         )}
 
-        {/* --- TAB SYSTEM DESIGN --- */}
+        {/* --- TAB SYSTEM DESIGN (BLUE SELECTION ACCENT FIXED) --- */}
         {!selectMode && (
-          <div className="flex bg-zinc-900/60 p-1 rounded-xl w-full border border-zinc-800">
+          <div className="flex bg-zinc-900 p-1 rounded-xl w-full border border-zinc-800">
             <button
               onClick={() => {
                 setActiveTab("all");
@@ -554,8 +554,8 @@ function Index() {
               }}
               className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all text-center ${
                 activeTab === "all"
-                  ? "bg-white text-black shadow-sm"
-                  : "text-white hover:text-zinc-300"
+                  ? "bg-blue-600 text-white shadow-md"
+                  : "text-zinc-400 hover:text-white"
               }`}
             >
               All Videos
@@ -564,8 +564,8 @@ function Index() {
               onClick={() => setActiveTab("folders")}
               className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all text-center ${
                 activeTab === "folders"
-                  ? "bg-white text-black shadow-sm"
-                  : "text-white hover:text-zinc-300"
+                  ? "bg-blue-600 text-white shadow-md"
+                  : "text-zinc-400 hover:text-white"
               }`}
             >
               Folders
@@ -850,7 +850,12 @@ function Index() {
         </div>
       )}
 
-      {!selectMode && <BottomTabs />}
+      {/* NOTE: BottomTabs components inner background can be controlled via its file or the wrapper div below */}
+      {!selectMode && (
+        <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-md bg-black border-t border-zinc-900 z-40">
+          <BottomTabs />
+        </div>
+      )}
     </div>
   );
 }
@@ -1013,4 +1018,3 @@ function VideoRow({
     </li>
   );
 }
-
