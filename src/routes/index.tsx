@@ -179,7 +179,7 @@ function Index() {
 
   if (activeTab === "all") {
     contentLayout = (
-      <ul className="px-3 pt-3 space-y-2">
+      <ul className="grid grid-cols-2 gap-3 px-3 pt-3">
         {filteredVideos.map((v) => (
           <VideoRow
             key={v.id}
@@ -210,7 +210,7 @@ function Index() {
               Back to Folders
             </button>
           </div>
-          <ul className="px-3 pt-1 space-y-2">
+          <ul className="grid grid-cols-2 gap-3 px-3 pt-1">
             {folderVideos.map((v) => (
               <VideoRow
                 key={v.id}
@@ -282,7 +282,6 @@ function Index() {
     setSelected(new Set());
   };
 
-  // 🔥 REAL NATIVE STORAGE REMOVAL: REMOVED WEB INTERRUPTIONS FOR PHYSICAL DELETION
   const onDelete = async () => {
     if (selected.size === 0) return;
     await deleteVideos([...selected]);
@@ -368,20 +367,17 @@ function Index() {
     }
   };
 
-  // 🔥 ADVANCED PROFESSIONAL NON-BLOCKING PIN ENGINE
   const handlePinSubmit = () => {
     if (inputPin.length !== 4) {
       alert("Please enter a valid 4-digit PIN.");
       return;
     }
 
-    // 1. Keyboard ko sabse pehle niche bitha do taaki input lock na phase
     if (document.activeElement instanceof HTMLElement) {
       document.activeElement.blur();
     }
 
     if (pinMode === "setup") {
-      // Setup direct close bina spinner lagaye
       localStorage.setItem("zabplay_privacy_pin", inputPin);
       setSavedPin(inputPin);
       setShowPinModal(false);
@@ -391,9 +387,7 @@ function Index() {
 
     } else if (pinMode === "unlock_hide") {
       if (inputPin === savedPin) {
-        // Pehle modal gayab karo taaki UI freeze na lage
         setShowPinModal(false);
-        // Chupchaap next micro-task me file operation run karo
         setTimeout(() => {
           executePrivacyLock();
         }, 150);
@@ -405,9 +399,7 @@ function Index() {
 
     } else if (pinMode === "unlock_view") {
       if (inputPin === savedPin) {
-        // Modal turant band karo
         setShowPinModal(false);
-        // Background non-blocking execution
         setTimeout(async () => {
           try {
             const data = await getPrivacyVideos();
@@ -583,8 +575,8 @@ function Index() {
       {/* --- WATCHING HISTORY HORIZONTAL SLIDER BLOCK --- */}
       {!selectMode && watchingHistory.length > 0 && !currentFolder && (
         <div className="mt-2 mb-4 border-b border-border/20 pb-4">
-          <div className="px-4 mb-2 flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-            <History className="h-3.5 w-3.5 text-primary" />
+          <div className="px-4 mb-2 flex items-center gap-1.5 text-sm font-bold uppercase tracking-wide text-muted-foreground">
+            <History className="h-4 w-4 text-primary" />
             <span>Watching History</span>
           </div>
           <div className="flex gap-3 overflow-x-auto px-4 scrollbar-none snap-x">
@@ -595,9 +587,9 @@ function Index() {
                   sessionStorage.setItem("homepage_scroll_pos", window.scrollY.toString());
                   navigate({ to: "/video/$id", params: { id: item.id } });
                 }}
-                className="w-32 flex-shrink-0 text-left snap-start space-y-1.5 group active:opacity-70 transition-opacity"
+                className="w-40 flex-shrink-0 text-left snap-start space-y-1.5 group active:opacity-70 transition-opacity"
               >
-                <div className="relative h-20 w-32 overflow-hidden rounded-lg border border-border/50 bg-secondary/60">
+                <div className="relative h-24 w-40 overflow-hidden rounded-lg border border-border/50 bg-secondary/60">
                   <img src={item.thumb} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
                   <div className="absolute bottom-0 left-0 w-full h-1 bg-black/40">
                     <div className="h-full bg-red-500 transition-all duration-300" style={{ width: `${item.progress}%` }} />
@@ -649,7 +641,6 @@ function Index() {
               </p>
             </div>
             
-            {/* Real Transparent Input (Fixed height & click priority layout) */}
             <div className="relative w-full max-w-[210px] mx-auto h-12 mt-2 pointer-events-auto">
               <input 
                 ref={pinInputRef}
@@ -663,7 +654,6 @@ function Index() {
                 autoFocus
               />
 
-              {/* ✨ MODERNISED SQUARE BOXES DESIGN */}
               <div className="absolute inset-0 flex justify-between items-center gap-3 z-10 pointer-events-none">
                 {[0, 1, 2, 3].map((index) => {
                   const isFocused = inputPin.length === index;
@@ -688,7 +678,6 @@ function Index() {
               </div>
             </div>
 
-            {/* Premium Flat Buttons Layout */}
             <div className="flex gap-3 text-xs font-semibold pt-2 relative z-[99999] pointer-events-auto">
               <button 
                 type="button"
@@ -914,11 +903,12 @@ function VideoRow({
           if (selectMode) onToggle();
           else onOpen();
         }}
-        className={`w-full flex gap-3 items-center p-2 rounded-xl text-left transition-colors ${
+        className={`w-full flex flex-col gap-2 p-2 rounded-xl text-left transition-colors ${
           selected ? "bg-primary/15" : "active:bg-secondary"
         }`}
       >
-        <div className="relative h-20 w-32 overflow-hidden rounded-lg border border-border/60 bg-secondary/70 flex-shrink-0">
+        {/* Thumbnail Layer - Ab pehle se lamba aur chauda hai (w-full h-28) */}
+        <div className="relative h-28 w-full overflow-hidden rounded-lg border border-border/60 bg-secondary/70 flex-shrink-0">
           <img src={video.thumb} alt={video.title} className="h-full w-full object-cover" loading="lazy" />
           {selectMode && (
             <div className="absolute top-1.5 left-1.5 bg-black/40 rounded-full p-0.5 backdrop-blur-sm z-10">
@@ -938,10 +928,13 @@ function VideoRow({
             <span className="text-[10px] text-white font-medium bg-black/50 px-1 rounded">{video.duration}</span>
           </div>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm text-foreground line-clamp-2 font-medium">{video.title}</p>
+        
+        {/* Title Layer */}
+        <div className="w-full px-1">
+          <p className="text-xs text-foreground line-clamp-1 font-medium">{video.title}</p>
         </div>
       </button>
     </li>
   );
 }
+
