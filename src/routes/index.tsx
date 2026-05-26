@@ -60,6 +60,7 @@ function Index() {
   const [showSearchInput, setShowSearchInput] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [showMenuDropdown, setShowMenuDropdown] = useState(false);
+  const [activeCardMenuId, setActiveCardMenuId] = useState<string | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -86,6 +87,17 @@ function Index() {
   const [savedPin, setSavedPin] = useState<string | null>(null);
   
   const pinInputRef = useRef<HTMLInputElement>(null);
+
+  // 1. ऑटोमेटिकली मेनू बंद करें जब यूजर स्क्रीन स्क्रॉल करे
+  useEffect(() => {
+    const handleScrollClose = () => {
+      setShowMenuDropdown(false);
+      setActiveCardMenuId(null);
+    };
+
+    window.addEventListener("scroll", handleScrollClose, true);
+    return () => window.removeEventListener("scroll", handleScrollClose, true);
+  }, []);
 
   useEffect(() => {
     const pin = localStorage.getItem("zabplay_privacy_pin");
@@ -192,7 +204,8 @@ function Index() {
             }}
             onToggle={() => toggle(v.id)}
             onLongPress={() => enterSelect(v.id)}
-            allVideos={videos}
+            activeCardMenuId={activeCardMenuId}
+            setActiveCardMenuId={setActiveCardMenuId}
           />
         ))}
       </ul>
@@ -224,7 +237,8 @@ function Index() {
                 }}
                 onToggle={() => toggle(v.id)}
                 onLongPress={() => enterSelect(v.id)}
-                allVideos={videos}
+                activeCardMenuId={activeCardMenuId}
+                setActiveCardMenuId={setActiveCardMenuId}
               />
             ))}
           </ul>
@@ -435,8 +449,22 @@ function Index() {
     }
   };
 
+  const isAnyMenuOpen = showMenuDropdown || activeCardMenuId !== null;
+
   return (
-    <div className="min-h-screen bg-black mx-auto max-w-md pb-32">
+    <div className="min-h-screen bg-black mx-auto max-w-md pb-32 relative">
+      {/* 2. स्क्रीन लॉक और बैकड्रॉप ओवरले: जब कोई भी मेनू खुला हो तो स्क्रीन लॉक हो जाए और बाहर कहीं भी क्लिक करने पर बंद हो जाए */}
+      {isAnyMenuOpen && (
+        <div 
+          className="fixed inset-0 z-40 bg-transparent cursor-default"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowMenuDropdown(false);
+            setActiveCardMenuId(null);
+          }}
+        />
+      )}
+
       <input
         ref={fileRef}
         type="file"
@@ -473,7 +501,7 @@ function Index() {
           <div className="space-y-3">
             <div className="flex items-center justify-between h-10">
               <Logo />
-              <div className="flex items-center gap-1 relative">
+              <div className="flex items-center gap-1 relative z-50">
                 <button
                   onClick={() => setShowSearchInput(!showSearchInput)}
                   className={`p-2 rounded-full transition-colors ${showSearchInput ? "bg-zinc-800 text-white" : "text-white/80 active:bg-zinc-900"}`}
@@ -486,6 +514,7 @@ function Index() {
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowMenuDropdown(!showMenuDropdown);
+                    setActiveCardMenuId(null); // टॉप मेनू खुलते ही कार्ड मेनू बंद करें
                   }}
                   className={`p-2 rounded-full transition-colors ${showMenuDropdown ? "bg-zinc-800 text-white" : "text-white/80 active:bg-zinc-900"}`}
                   aria-label="More options"
@@ -586,6 +615,7 @@ function Index() {
               <button
                 key={`hist-${item.id}`}
                 onClick={() => {
+                  if (isAnyMenuOpen) return; // अगर कोई मेनू खुला है तो क्लिक लॉक रखें
                   sessionStorage.setItem("homepage_scroll_pos", window.scrollY.toString());
                   navigate({ to: "/video/$id", params: { id: item.id } });
                 }}
@@ -850,7 +880,6 @@ function Index() {
         </div>
       )}
 
-      {/* NOTE: BottomTabs components inner background can be controlled via its file or the wrapper div below */}
       {!selectMode && (
         <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-md bg-black border-t border-zinc-900 z-40">
           <BottomTabs />
@@ -866,8 +895,8 @@ function VideoRow({
   selected,
   onOpen,
   onToggle,
-  onLongPress,
-  allVideos,
+  activeCardMenuId,
+  setActiveCardMenuId,
 }: {
   video: { id: string; title: string; duration: string; thumb: string; src: string };
   selectMode: boolean;
@@ -875,12 +904,12 @@ function VideoRow({
   onOpen: () => void;
   onToggle: () => void;
   onLongPress: () => void;
-  allVideos: any[];
+  activeCardMenuId: string | null;
+  setActiveCardMenuId: (id: string | null) => void;
 }) {
-  const { didTrigger, ...pressHandlers } = useLongPress(onLongPress, 450);
+  const { didTrigger, ...pressHandlers } = useLongPress(() => {}, 450);
   const [progress, setProgress] = useState(0);
-  const [showCardMenu, setShowCardMenu] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
+  const showCardMenu = activeCardMenuId === video.id;
 
   useEffect(() => {
     try {
@@ -905,20 +934,8 @@ function VideoRow({
     }
   }, [video.id, video.src, video.duration]);
 
-  useEffect(() => {
-    if (!showCardMenu) return;
-    const clickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowCardMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", clickOutside);
-    return () => document.removeEventListener("mousedown", clickOutside);
-  }, [showCardMenu]);
-
-  // Individual Card Action Handler
   const handleCardAction = (action: "share" | "transfer" | "privacy") => {
-    setShowCardMenu(false);
+    setActiveCardMenuId(null);
     if (action === "share") {
       shareItems([{ id: video.id, title: video.title, src: video.src }]);
     } else if (action === "transfer") {
@@ -976,11 +993,13 @@ function VideoRow({
             <div 
               onClick={(e) => {
                 e.stopPropagation();
-                setShowCardMenu(!showCardMenu);
+                // अगर ये मेनू पहले से खुला है तो बंद करो, वरना इसे चालू करो
+                setActiveCardMenuId(showCardMenu ? null : video.id);
               }}
-              className="p-1 -mt-1 -mr-1 rounded-full text-zinc-400 hover:text-white active:bg-zinc-800 cursor-pointer"
+              className="p-1 -mt-1 -mr-1 rounded-full text-white active:bg-zinc-800 cursor-pointer z-50"
             >
-              <MoreVertical className="h-3.5 w-3.5" />
+              {/* 4. यहाँ आइकॉन को 'text-white' क्लास दी गई है */}
+              <MoreVertical className="h-3.5 w-3.5 text-white" />
             </div>
           )}
         </div>
@@ -989,8 +1008,8 @@ function VideoRow({
       {/* --- IN-CARD ACTIONS DROPDOWN OVERLAY --- */}
       {showCardMenu && (
         <div 
-          ref={menuRef}
           className="absolute right-2 bottom-12 w-36 bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl z-50 py-1 animate-scaleUp"
+          onClick={(e) => e.stopPropagation()}
         >
           <button 
             onClick={() => handleCardAction("share")}
@@ -1018,3 +1037,4 @@ function VideoRow({
     </li>
   );
 }
+
