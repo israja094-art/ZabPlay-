@@ -18,7 +18,9 @@ import {
   Edit3,
   HardDrive,
   Music,
-  Settings2
+  Settings2,
+  ArrowUp,
+  ArrowDown
 } from "lucide-react";
 import { BottomTabs } from "@/components/BottomTabs";
 import { Logo } from "@/components/Logo";
@@ -336,8 +338,7 @@ function Index() {
   };
 
   const onFileTransfer = () => {
-    if (selected.size === 0) return;
-    alert(`Transferring ${selected.size} video file(s)...`);
+    alert(`Opening File Transfer tool...`);
     exitSelect();
   };
 
@@ -565,7 +566,6 @@ function Index() {
                 <div className="relative h-28 w-44 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
                   <img src={item.thumb} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
                   <div className="absolute bottom-0 left-0 w-full h-1 bg-black/40">
-                    {/* प्रोग्रेस पट्टी को डार्क ब्लू (bg-blue-700) कर दिया गया है */}
                     <div className="h-full bg-blue-700 transition-all duration-300" style={{ width: `${item.progress}%` }} />
                   </div>
                   <div className="absolute inset-x-0 bottom-1.5 px-2 py-0.5 text-right">
@@ -579,9 +579,9 @@ function Index() {
         </div>
       )}
 
-      {/* --- TAB SYSTEM DESIGN (NOW PLACED BELOW WATCHING HISTORY) --- */}
+      {/* --- TAB SYSTEM DESIGN (STICKY ON SCROLL) --- */}
       {!selectMode && (
-        <div className="px-4 mb-2">
+        <div className="px-4 mb-2 sticky top-[77px] z-20 bg-black pb-2">
           <div className="flex bg-zinc-900 p-1 rounded-xl w-full border border-zinc-800">
             <button
               onClick={() => {
@@ -795,7 +795,6 @@ function Index() {
                   <img src={h.thumb} className="h-12 w-20 object-cover rounded-lg" />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium truncate">{h.title}</p>
-                    {/* प्रोग्रेस पट्टी के टेक्स्ट को डार्क ब्लू कर दिया गया है */}
                     <p className="text-[10px] text-blue-500 font-bold mt-0.5">Watched {h.progress.toFixed(0)}%</p>
                   </div>
                 </div>
@@ -817,17 +816,6 @@ function Index() {
               <Lock className="h-5 w-5 mb-1" />
               <span className="text-[10px] font-medium text-white/80">Privacy</span>
             </button>
-
-            {/* 🔥 फ़ाइल ट्रांसफर बटन - बीच में, गोल आकार (Round) और डार्क ब्लू व ग्रीन मिक्स डिज़ाइन में */}
-            <button 
-              onClick={onFileTransfer} 
-              disabled={selected.size === 0} 
-              className="flex flex-col items-center justify-center h-12 w-12 rounded-full bg-gradient-to-tr from-blue-900 to-green-600 text-white disabled:opacity-40 disabled:pointer-events-none active:scale-95 transition-transform mx-2 shadow-lg"
-              title="File Transfer"
-            >
-              <ArrowRightLeft className="h-5 w-5" />
-            </button>
-
             <button onClick={onDelete} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-destructive disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Trash2 className="h-5 w-5 mb-1" />
               <span className="text-[10px] font-medium text-white/80">Delete</span>
@@ -844,7 +832,40 @@ function Index() {
         </div>
       )}
 
-      {!selectMode && <BottomTabs />}
+      {/* 🔥 होम पेज पर बॉटम नेविगेशन बार और सीधा किया हुआ फ़ाइल ट्रांसफर बटन */}
+      {!selectMode && (
+        <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-md bg-zinc-950 border-t border-zinc-900 backdrop-blur-md shadow-xl z-50">
+          <div className="relative flex items-center justify-between px-6 h-16">
+            
+            {/* वीडियो बटन (लेफ्ट साइड) */}
+            <button className="flex flex-col items-center justify-center text-primary transition-colors flex-1">
+              <HardDrive className="h-5 w-5 fill-primary/10" />
+              <span className="text-[10px] font-bold mt-1">Videos</span>
+            </button>
+
+            {/* 🔥 फ़ाइल ट्रांसफर बटन - बिल्कुल बीच में, सीधा (Up-Down arrows), थोड़ा बड़ा और आकर्षक */}
+            <div className="absolute left-1/2 bottom-3 -translate-x-1/2 z-50">
+              <button 
+                onClick={onFileTransfer} 
+                className="flex items-center justify-center h-13 w-13 rounded-full bg-gradient-to-tr from-blue-900 to-green-600 text-white active:scale-95 transition-transform shadow-[0_4px_15px_rgba(0,0,0,0.5)] border border-white/10"
+                title="File Transfer"
+              >
+                <div className="flex flex-col items-center justify-center gap-0.5">
+                  <ArrowUp className="h-4 w-4 stroke-[3px]" />
+                  <ArrowDown className="h-4 w-4 stroke-[3px]" />
+                </div>
+              </button>
+            </div>
+
+            {/* म्यूजिक बटन (राइट साइड) */}
+            <button className="flex flex-col items-center justify-center text-muted-foreground hover:text-white transition-colors flex-1">
+              <Music className="h-5 w-5" />
+              <span className="text-[10px] font-medium mt-1">Music</span>
+            </button>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -915,7 +936,6 @@ function VideoCard({
         )}
         {progress > 2 && (
           <div className="absolute bottom-0 left-0 w-full h-1 bg-white/20">
-            {/* यहाँ भी लाल पट्टी हटाकर डार्क ब्लू (bg-blue-700) कर दिया गया है */}
             <div className="h-full bg-blue-700" style={{ width: `${progress}%` }} />
           </div>
         )}
