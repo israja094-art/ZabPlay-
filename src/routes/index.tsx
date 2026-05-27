@@ -477,8 +477,8 @@ function Index() {
         }}
       />
 
-      {/* --- STICKY TOP HEADER ZONE (SOLID BLACK BACKGROUND FOR OVERLAP FIX) --- */}
-      <div className="px-4 pt-5 pb-3 space-y-4 sticky top-0 bg-black z-50 border-b border-zinc-900">
+      {/* --- STICKY TOP HEADER ZONE --- */}
+      <div className="px-4 pt-5 pb-3 space-y-4 sticky top-0 bg-black/95 backdrop-blur z-30 border-b border-zinc-900">
         {selectMode ? (
           <div className="flex items-center justify-between h-10 animate-fadeIn">
             <div className="flex items-center gap-3">
@@ -880,21 +880,9 @@ function Index() {
         </div>
       )}
 
-      {/* --- SOLID BLACK BOTTOM NAV WITH CENTER ROUNDED GREEN FILE TRANSFER BUTTON --- */}
       {!selectMode && (
-        <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-md bg-black border-t border-zinc-900 z-50 h-16 flex items-center justify-between px-6">
+        <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-md bg-black border-t border-zinc-900 z-40">
           <BottomTabs />
-          
-          {/* 20 Center Floating Green File Transfer Icon */}
-          <div className="absolute left-1/2 bottom-3 -translate-x-1/2 z-50">
-            <button 
-              onClick={() => handleDropdownAction("File Transfer")}
-              className="w-12 h-12 rounded-full bg-green-600 hover:bg-green-500 active:scale-95 text-white flex items-center justify-center shadow-lg shadow-green-900/30 border border-green-500/20 transition-all"
-              aria-label="File Transfer"
-            >
-              <ArrowRightLeft className="h-5 w-5 stroke-[2.5]" />
-            </button>
-          </div>
         </div>
       )}
     </div>
@@ -1010,6 +998,7 @@ function VideoRow({
               }}
               className="p-1 -mt-1 -mr-1 rounded-full text-white active:bg-zinc-800 cursor-pointer z-50"
             >
+              {/* 4. यहाँ आइकॉन को 'text-white' क्लास दी गई है */}
               <MoreVertical className="h-3.5 w-3.5 text-white" />
             </div>
           )}
@@ -1048,4 +1037,3 @@ function VideoRow({
     </li>
   );
 }
-
