@@ -201,7 +201,7 @@ function Index() {
       const folderVideos = foldersMap[currentFolder] || [];
       contentLayout = (
         <div className="space-y-2">
-          <div className="px-4 py-2 flex items-center justify-between bg-secondary/30 border-b border-border/30">
+          <div className="px-4 py-2 flex items-center justify-between bg-zinc-900 border-b border-border/30">
             <span className="text-sm font-semibold text-primary truncate">Folder: {currentFolder}</span>
             <button 
               onClick={() => setCurrentFolder(null)}
@@ -244,7 +244,7 @@ function Index() {
                   if (selectMode) return;
                   setCurrentFolder(name);
                 }}
-                className="flex flex-col items-center justify-center p-4 rounded-xl border border-border/60 bg-secondary/20 active:bg-secondary/50 transition-all text-center gap-2"
+                className="flex flex-col items-center justify-center p-4 rounded-xl border border-border/60 bg-zinc-900/50 active:bg-zinc-800 transition-all text-center gap-2"
               >
                 <div className="relative p-3 bg-primary/10 rounded-xl text-primary">
                   <Folder className="h-8 w-8 fill-primary/20" />
@@ -369,7 +369,6 @@ function Index() {
     }
   };
 
-  // 🔥 ADVANCED PROFESSIONAL NON-BLOCKING PIN ENGINE
   const handlePinSubmit = () => {
     if (inputPin.length !== 4) {
       alert("Please enter a valid 4-digit PIN.");
@@ -437,7 +436,7 @@ function Index() {
   };
 
   return (
-    <div className="min-h-screen bg-background mx-auto max-w-md pb-32">
+    <div className="min-h-screen bg-black mx-auto max-w-md pb-32 text-white">
       <input
         ref={fileRef}
         type="file"
@@ -451,7 +450,7 @@ function Index() {
       />
 
       {/* --- STICKY TOP HEADER ZONE --- */}
-      <div className="px-4 pt-5 pb-3 space-y-4 sticky top-0 bg-background/95 backdrop-blur z-30 border-b border-border/50">
+      <div className="px-4 pt-5 pb-3 space-y-4 sticky top-0 bg-black/95 backdrop-blur z-30 border-b border-zinc-800">
         {selectMode ? (
           <div className="flex items-center justify-between h-10 animate-fadeIn">
             <div className="flex items-center gap-3">
@@ -462,11 +461,11 @@ function Index() {
                   <Square className="h-6 w-6 text-muted-foreground" />
                 )}
               </button>
-              <span className="text-base font-semibold text-foreground">
+              <span className="text-base font-semibold text-white">
                 {selected.size} / {currentTabVideos.length} Selected
               </span>
             </div>
-            <button onClick={exitSelect} className="p-2 rounded-full bg-secondary/50 text-foreground active:scale-90 transition-transform">
+            <button onClick={exitSelect} className="p-2 rounded-full bg-zinc-800 text-white active:scale-90 transition-transform">
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -477,7 +476,7 @@ function Index() {
               <div className="flex items-center gap-1 relative">
                 <button
                   onClick={() => setShowSearchInput(!showSearchInput)}
-                  className={`p-2 rounded-full transition-colors ${showSearchInput ? "bg-primary/20 text-primary" : "text-foreground/80 active:bg-secondary"}`}
+                  className={`p-2 rounded-full transition-colors ${showSearchInput ? "bg-primary/20 text-primary" : "text-white/80 active:bg-zinc-800"}`}
                   aria-label="Toggle search input"
                 >
                   <Search className="h-5 w-5" />
@@ -488,35 +487,35 @@ function Index() {
                     e.stopPropagation();
                     setShowMenuDropdown(!showMenuDropdown);
                   }}
-                  className={`p-2 rounded-full transition-colors ${showMenuDropdown ? "bg-secondary text-primary" : "text-foreground/80 active:bg-secondary"}`}
+                  className={`p-2 rounded-full transition-colors ${showMenuDropdown ? "bg-zinc-800 text-primary" : "text-white/80 active:bg-zinc-800"}`}
                   aria-label="More options"
                 >
                   <MoreVertical className="h-5 w-5 font-bold scale-y-110" />
                 </button>
 
                 {showMenuDropdown && (
-                  <div className="absolute right-0 top-12 w-52 bg-background/95 border border-border/80 rounded-2xl shadow-2xl z-50 py-2 animate-scaleUp backdrop-blur-md">
-                    <button onClick={() => handleDropdownAction("File Transfer")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
+                  <div className="absolute right-0 top-12 w-52 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl z-50 py-2 animate-scaleUp backdrop-blur-md">
+                    <button onClick={() => handleDropdownAction("File Transfer")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/90 active:bg-primary/15 transition-colors text-left">
                       <ArrowRightLeft className="h-4 w-4 text-primary" />
                       <span className="font-medium">File Transfer</span>
                     </button>
-                    <button onClick={() => handleDropdownAction("Storage Info")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
+                    <button onClick={() => handleDropdownAction("Storage Info")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/90 active:bg-primary/15 transition-colors text-left">
                       <HardDrive className="h-4 w-4 text-primary" />
                       <span className="font-medium">Storage Info</span>
                     </button>
-                    <button onClick={() => handleDropdownAction("Privacy Folder")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
+                    <button onClick={() => handleDropdownAction("Privacy Folder")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/90 active:bg-primary/15 transition-colors text-left">
                       <Lock className="h-4 w-4 text-primary" />
                       <span className="font-medium">Privacy Folder</span>
                     </button>
-                    <button onClick={() => handleDropdownAction("History")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
+                    <button onClick={() => handleDropdownAction("History")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/90 active:bg-primary/15 transition-colors text-left">
                       <History className="h-4 w-4 text-primary" />
                       <span className="font-medium">History</span>
                     </button>
-                    <button onClick={() => handleDropdownAction("MP3 Converter")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left">
+                    <button onClick={() => handleDropdownAction("MP3 Converter")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/90 active:bg-primary/15 transition-colors text-left">
                       <Music className="h-4 w-4 text-primary" />
                       <span className="font-medium">MP3 Converter</span>
                     </button>
-                    <button onClick={() => handleDropdownAction("Settings")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-foreground/90 active:bg-primary/15 transition-colors text-left border-t border-border/40 mt-1 pt-2">
+                    <button onClick={() => handleDropdownAction("Settings")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/90 active:bg-primary/15 transition-colors text-left border-t border-zinc-800 mt-1 pt-2">
                       <Settings2 className="h-4 w-4 text-primary" />
                       <span className="font-medium">Settings</span>
                     </button>
@@ -532,11 +531,11 @@ function Index() {
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
                   placeholder="Search videos..."
-                  className="w-full bg-secondary/50 text-sm text-foreground placeholder:text-muted-foreground pl-4 pr-10 py-2 rounded-xl border border-border/40 focus:outline-none focus:border-primary/50 transition-all"
+                  className="w-full bg-zinc-900 text-sm text-white placeholder:text-muted-foreground pl-4 pr-10 py-2 rounded-xl border border-zinc-800 focus:outline-none focus:border-primary/50 transition-all"
                   autoFocus
                 />
                 {q && (
-                  <button onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  <button onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white">
                     <X className="h-4 w-4" />
                   </button>
                 )}
@@ -544,40 +543,11 @@ function Index() {
             )}
           </div>
         )}
-
-        {/* --- TAB SYSTEM DESIGN --- */}
-        {!selectMode && (
-          <div className="flex bg-secondary/40 p-1 rounded-xl w-full border border-border/30">
-            <button
-              onClick={() => {
-                setActiveTab("all");
-                setCurrentFolder(null);
-              }}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all text-center ${
-                activeTab === "all"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              All Videos
-            </button>
-            <button
-              onClick={() => setActiveTab("folders")}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all text-center ${
-                activeTab === "folders"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              Folders
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* --- WATCHING HISTORY HORIZONTAL SLIDER BLOCK --- */}
+      {/* --- 🔄 WATCHING HISTORY (NOW AT THE TOP AS REQUESTED) --- */}
       {!selectMode && watchingHistory.length > 0 && !currentFolder && (
-        <div className="mt-3 mb-4 border-b border-border/20 pb-4">
+        <div className="mt-1 mb-4 border-b border-zinc-800 pb-4">
           <div className="px-4 mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-muted-foreground">
             <History className="h-4 w-4 text-primary" />
             <span>Watching History</span>
@@ -592,18 +562,50 @@ function Index() {
                 }}
                 className="w-44 flex-shrink-0 text-left snap-start space-y-1.5 group active:opacity-70 transition-opacity"
               >
-                <div className="relative h-28 w-44 overflow-hidden rounded-xl border border-border/50 bg-secondary/60">
+                <div className="relative h-28 w-44 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
                   <img src={item.thumb} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
                   <div className="absolute bottom-0 left-0 w-full h-1 bg-black/40">
-                    <div className="h-full bg-red-500 transition-all duration-300" style={{ width: `${item.progress}%` }} />
+                    {/* प्रोग्रेस पट्टी को डार्क ब्लू (bg-blue-700) कर दिया गया है */}
+                    <div className="h-full bg-blue-700 transition-all duration-300" style={{ width: `${item.progress}%` }} />
                   </div>
                   <div className="absolute inset-x-0 bottom-1.5 px-2 py-0.5 text-right">
                     <span className="text-[10px] text-white font-medium bg-black/60 px-1.5 py-0.5 rounded">{item.duration}</span>
                   </div>
                 </div>
-                <p className="text-xs font-medium text-foreground line-clamp-1 group-hover:text-primary transition-colors">{item.title}</p>
+                <p className="text-xs font-medium text-white line-clamp-1 group-hover:text-primary transition-colors">{item.title}</p>
               </button>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* --- TAB SYSTEM DESIGN (NOW PLACED BELOW WATCHING HISTORY) --- */}
+      {!selectMode && (
+        <div className="px-4 mb-2">
+          <div className="flex bg-zinc-900 p-1 rounded-xl w-full border border-zinc-800">
+            <button
+              onClick={() => {
+                setActiveTab("all");
+                setCurrentFolder(null);
+              }}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all text-center ${
+                activeTab === "all"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-white"
+              }`}
+            >
+              All Videos
+            </button>
+            <button
+              onClick={() => setActiveTab("folders")}
+              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all text-center ${
+                activeTab === "folders"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-white"
+              }`}
+            >
+              Folders
+            </button>
           </div>
         </div>
       )}
@@ -620,11 +622,11 @@ function Index() {
       {/* --- 🔐 PREMIUM FIXED MODAL: PRIVACY PIN SETUP & UNLOCK ENGINE --- */}
       {showPinModal && (
         <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[99999] pointer-events-auto"
+          className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-[99999] pointer-events-auto"
           onClick={() => pinInputRef.current?.focus()}
         >
           <div 
-            className="bg-[#0b1220] w-[290px] rounded-[24px] p-6 border border-white/10 shadow-2xl text-center relative space-y-5 pointer-events-auto"
+            className="bg-zinc-900 w-[290px] rounded-[24px] p-6 border border-white/10 shadow-2xl text-center relative space-y-5 pointer-events-auto"
             onClick={(e) => {
               e.stopPropagation();
               pinInputRef.current?.focus();
@@ -710,17 +712,17 @@ function Index() {
 
       {/* --- REAL MODAL: RENAME POPUP ENGINE --- */}
       {showRenameModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="bg-background w-full max-w-xs rounded-2xl p-4 border border-border/80 shadow-2xl space-y-3">
-            <h3 className="text-sm font-bold text-foreground">Rename Video</h3>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="bg-zinc-900 w-full max-w-xs rounded-2xl p-4 border border-zinc-800 shadow-2xl space-y-3">
+            <h3 className="text-sm font-bold text-white">Rename Video</h3>
             <input 
               type="text" 
               value={newTitleValue}
               onChange={(e) => setNewTitleValue(e.target.value)}
-              className="w-full bg-secondary px-3 py-2 text-sm rounded-xl border border-border/40 focus:outline-none focus:border-primary"
+              className="w-full bg-black text-white px-3 py-2 text-sm rounded-xl border border-zinc-800 focus:outline-none focus:border-primary"
             />
             <div className="flex gap-2 justify-end text-xs font-semibold">
-              <button onClick={() => setShowRenameModal(false)} className="px-3 py-2 rounded-lg bg-secondary text-foreground">Cancel</button>
+              <button onClick={() => setShowRenameModal(false)} className="px-3 py-2 rounded-lg bg-zinc-800 text-white">Cancel</button>
               <button onClick={saveRenameAction} className="px-3 py-2 rounded-lg bg-primary text-primary-foreground">Save</button>
             </div>
           </div>
@@ -729,13 +731,13 @@ function Index() {
 
       {/* --- REAL MODAL: PRIVACY FOLDER VIEWER --- */}
       {showPrivacyModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex flex-col z-50 p-4">
-          <div className="flex items-center justify-between border-b border-border/40 pb-3 mb-3">
+        <div className="fixed inset-0 bg-black backdrop-blur-md flex flex-col z-50 p-4">
+          <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-3">
             <div className="flex items-center gap-2 font-bold text-primary">
               <Lock className="h-5 w-5" />
               <span>Secure Privacy Storage</span>
             </div>
-            <button onClick={() => setShowPrivacyModal(false)} className="p-1 rounded-full bg-secondary text-foreground">
+            <button onClick={() => setShowPrivacyModal(false)} className="p-1 rounded-full bg-zinc-800 text-white">
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -744,7 +746,7 @@ function Index() {
               <p className="text-center text-xs text-muted-foreground mt-10">No videos inside secure privacy folder.</p>
             ) : (
               privacyVideosList.map(v => (
-                <div key={`priv-${v.id}`} className="flex items-center gap-3 p-2 bg-secondary/30 rounded-xl">
+                <div key={`priv-${v.id}`} className="flex items-center gap-3 p-2 bg-zinc-900 rounded-xl">
                   <img src={v.thumb} className="h-12 w-20 object-cover rounded-lg" />
                   <span className="text-xs font-medium truncate flex-1">{v.title}</span>
                 </div>
@@ -756,31 +758,31 @@ function Index() {
 
       {/* --- REAL MODAL: STORAGE INFO VIEW --- */}
       {showStorageModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-background w-full max-w-xs rounded-2xl p-4 border border-border/80 shadow-2xl space-y-4 text-center">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-zinc-900 w-full max-w-xs rounded-2xl p-4 border border-zinc-800 shadow-2xl space-y-4 text-center">
             <HardDrive className="h-8 w-8 text-primary mx-auto" />
             <div>
               <h3 className="text-sm font-bold">Storage Analyzer</h3>
               <p className="text-xs text-muted-foreground mt-1">ZabPlay Local Database Sync Status</p>
             </div>
-            <div className="w-full bg-secondary h-2.5 rounded-full overflow-hidden">
+            <div className="w-full bg-black h-2.5 rounded-full overflow-hidden">
               <div className="bg-primary h-full w-[45%]" />
             </div>
-            <p className="text-[11px] font-semibold text-foreground/80">IndexedDB: {videos.length} Registered System Tracks</p>
-            <button onClick={() => setShowStorageModal(false)} className="w-full py-2 text-xs font-semibold bg-secondary rounded-xl">Close</button>
+            <p className="text-[11px] font-semibold text-white/80">IndexedDB: {videos.length} Registered System Tracks</p>
+            <button onClick={() => setShowStorageModal(false)} className="w-full py-2 text-xs font-semibold bg-zinc-800 rounded-xl">Close</button>
           </div>
         </div>
       )}
 
       {/* --- REAL MODAL: ALL HISTORY LIST VIEWER --- */}
       {showHistoryModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex flex-col z-50 p-4">
-          <div className="flex items-center justify-between border-b border-border/40 pb-3 mb-3">
+        <div className="fixed inset-0 bg-black backdrop-blur-md flex flex-col z-50 p-4">
+          <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-3">
             <div className="flex items-center gap-2 font-bold text-primary">
               <History className="h-5 w-5" />
               <span>Full Watching History ({watchingHistory.length})</span>
             </div>
-            <button onClick={() => setShowHistoryModal(false)} className="p-1 rounded-full bg-secondary text-foreground">
+            <button onClick={() => setShowHistoryModal(false)} className="p-1 rounded-full bg-zinc-800 text-white">
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -789,11 +791,12 @@ function Index() {
               <p className="text-center text-xs text-muted-foreground mt-10">No history found.</p>
             ) : (
               watchingHistory.map(h => (
-                <div key={`fullhist-${h.id}`} className="flex items-center gap-3 p-2 bg-secondary/30 rounded-xl">
+                <div key={`fullhist-${h.id}`} className="flex items-center gap-3 p-2 bg-zinc-900 rounded-xl">
                   <img src={h.thumb} className="h-12 w-20 object-cover rounded-lg" />
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-medium truncate">{h.title}</p>
-                    <p className="text-[10px] text-red-500 font-bold mt-0.5">Watched {h.progress.toFixed(0)}%</p>
+                    {/* प्रोग्रेस पट्टी के टेक्स्ट को डार्क ब्लू कर दिया गया है */}
+                    <p className="text-[10px] text-blue-500 font-bold mt-0.5">Watched {h.progress.toFixed(0)}%</p>
                   </div>
                 </div>
               ))
@@ -804,31 +807,38 @@ function Index() {
 
       {/* BOTTOM ACTION BAR PATTI */}
       {selectMode && (
-        <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-md bg-background/95 border-t border-border/60 backdrop-blur-md shadow-2xl z-50 animate-slideUp">
+        <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-md bg-zinc-950 border-t border-zinc-800 backdrop-blur-md shadow-2xl z-50 animate-slideUp">
           <div className="flex items-center justify-around py-3 px-2">
             <button onClick={onShare} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Share2 className="h-5 w-5 mb-1" />
-              <span className="text-[10px] font-medium text-foreground/80">Share</span>
+              <span className="text-[10px] font-medium text-white/80">Share</span>
             </button>
             <button onClick={onPrivacySecure} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Lock className="h-5 w-5 mb-1" />
-              <span className="text-[10px] font-medium text-foreground/80">Privacy</span>
+              <span className="text-[10px] font-medium text-white/80">Privacy</span>
             </button>
+
+            {/* 🔥 फ़ाइल ट्रांसफर बटन - बीच में, गोल आकार (Round) और डार्क ब्लू व ग्रीन मिक्स डिज़ाइन में */}
+            <button 
+              onClick={onFileTransfer} 
+              disabled={selected.size === 0} 
+              className="flex flex-col items-center justify-center h-12 w-12 rounded-full bg-gradient-to-tr from-blue-900 to-green-600 text-white disabled:opacity-40 disabled:pointer-events-none active:scale-95 transition-transform mx-2 shadow-lg"
+              title="File Transfer"
+            >
+              <ArrowRightLeft className="h-5 w-5" />
+            </button>
+
             <button onClick={onDelete} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-destructive disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Trash2 className="h-5 w-5 mb-1" />
-              <span className="text-[10px] font-medium text-foreground/80">Delete</span>
-            </button>
-            <button onClick={onFileTransfer} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
-              <ArrowRightLeft className="h-5 w-5 mb-1" />
-              <span className="text-[10px] font-medium text-foreground/80">Transfer</span>
+              <span className="text-[10px] font-medium text-white/80">Delete</span>
             </button>
             <button onClick={onVideoCut} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Scissors className="h-5 w-5 mb-1" />
-              <span className="text-[10px] font-medium text-foreground/80">Cut Video</span>
+              <span className="text-[10px] font-medium text-white/80">Cut Video</span>
             </button>
             <button onClick={onRename} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-primary disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Edit3 className="h-5 w-5 mb-1" />
-              <span className="text-[10px] font-medium text-foreground/80">Rename</span>
+              <span className="text-[10px] font-medium text-white/80">Rename</span>
             </button>
           </div>
         </div>
@@ -889,10 +899,10 @@ function VideoCard({
         else onOpen();
       }}
       className={`w-full flex flex-col gap-2 p-1.5 rounded-xl text-left transition-colors ${
-        selected ? "bg-primary/15" : "active:bg-secondary"
+        selected ? "bg-primary/15" : "active:bg-zinc-900"
       }`}
     >
-      <div className="relative w-full aspect-video overflow-hidden rounded-xl border border-border/60 bg-secondary/70">
+      <div className="relative w-full aspect-video overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
         <img src={video.thumb} alt={video.title} className="h-full w-full object-cover" loading="lazy" />
         {selectMode && (
           <div className="absolute top-1.5 left-1.5 bg-black/40 rounded-full p-0.5 backdrop-blur-sm z-10">
@@ -905,14 +915,15 @@ function VideoCard({
         )}
         {progress > 2 && (
           <div className="absolute bottom-0 left-0 w-full h-1 bg-white/20">
-            <div className="h-full bg-red-500" style={{ width: `${progress}%` }} />
+            {/* यहाँ भी लाल पट्टी हटाकर डार्क ब्लू (bg-blue-700) कर दिया गया है */}
+            <div className="h-full bg-blue-700" style={{ width: `${progress}%` }} />
           </div>
         )}
         <div className="absolute bottom-1.5 right-1.5">
           <span className="text-[10px] text-white font-medium bg-black/60 px-1.5 py-0.5 rounded">{video.duration}</span>
         </div>
       </div>
-      <p className="text-xs text-foreground line-clamp-2 font-medium px-1 leading-tight">{video.title}</p>
+      <p className="text-xs text-white line-clamp-2 font-medium px-1 leading-tight">{video.title}</p>
     </button>
   );
 }
