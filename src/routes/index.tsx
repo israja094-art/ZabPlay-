@@ -18,9 +18,7 @@ import {
   Edit3,
   HardDrive,
   Music,
-  Settings2,
-  ArrowUp,
-  ArrowDown
+  Settings2
 } from "lucide-react";
 import { BottomTabs } from "@/components/BottomTabs";
 import { Logo } from "@/components/Logo";
@@ -338,7 +336,8 @@ function Index() {
   };
 
   const onFileTransfer = () => {
-    alert(`Opening File Transfer tool...`);
+    if (selected.size === 0) return;
+    alert(`Transferring ${selected.size} video file(s)...`);
     exitSelect();
   };
 
@@ -450,165 +449,169 @@ function Index() {
         }}
       />
 
-      {/* --- STICKY TOP HEADER ZONE --- */}
-      <div className="px-4 pt-5 pb-3 space-y-4 sticky top-0 bg-black/95 backdrop-blur z-30 border-b border-zinc-800">
-        {selectMode ? (
-          <div className="flex items-center justify-between h-10 animate-fadeIn">
-            <div className="flex items-center gap-3">
-              <button onClick={handleSelectAllToggle} className="text-primary active:scale-90 transition-transform" aria-label="Select All Toggle">
-                {allSelected ? (
-                  <CheckSquare className="h-6 w-6 fill-primary/10" />
-                ) : (
-                  <Square className="h-6 w-6 text-muted-foreground" />
-                )}
+      {/* --- 🔥 COMPLETE STICKY TOP ZONE (HEADERS + WATCHING HISTORY + TABS LOCKED TOGETHER) --- */}
+      <div className="sticky top-0 bg-black z-30 border-b border-zinc-800">
+        
+        {/* --- HEADER NAVIGATION BAR --- */}
+        <div className="px-4 pt-5 pb-3">
+          {selectMode ? (
+            <div className="flex items-center justify-between h-10 animate-fadeIn">
+              <div className="flex items-center gap-3">
+                <button onClick={handleSelectAllToggle} className="text-primary active:scale-90 transition-transform" aria-label="Select All Toggle">
+                  {allSelected ? (
+                    <CheckSquare className="h-6 w-6 fill-primary/10" />
+                  ) : (
+                    <Square className="h-6 w-6 text-muted-foreground" />
+                  )}
+                </button>
+                <span className="text-base font-semibold text-white">
+                  {selected.size} / {currentTabVideos.length} Selected
+                </span>
+              </div>
+              <button onClick={exitSelect} className="p-2 rounded-full bg-zinc-800 text-white active:scale-90 transition-transform">
+                <X className="h-5 w-5" />
               </button>
-              <span className="text-base font-semibold text-white">
-                {selected.size} / {currentTabVideos.length} Selected
-              </span>
             </div>
-            <button onClick={exitSelect} className="p-2 rounded-full bg-zinc-800 text-white active:scale-90 transition-transform">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between h-10">
-              <Logo />
-              <div className="flex items-center gap-1 relative">
-                <button
-                  onClick={() => setShowSearchInput(!showSearchInput)}
-                  className={`p-2 rounded-full transition-colors ${showSearchInput ? "bg-primary/20 text-primary" : "text-white/80 active:bg-zinc-800"}`}
-                  aria-label="Toggle search input"
-                >
-                  <Search className="h-5 w-5" />
-                </button>
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setShowMenuDropdown(!showMenuDropdown);
-                  }}
-                  className={`p-2 rounded-full transition-colors ${showMenuDropdown ? "bg-zinc-800 text-primary" : "text-white/80 active:bg-zinc-800"}`}
-                  aria-label="More options"
-                >
-                  <MoreVertical className="h-5 w-5 font-bold scale-y-110" />
-                </button>
-
-                {showMenuDropdown && (
-                  <div className="absolute right-0 top-12 w-52 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl z-50 py-2 animate-scaleUp backdrop-blur-md">
-                    <button onClick={() => handleDropdownAction("File Transfer")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/90 active:bg-primary/15 transition-colors text-left">
-                      <ArrowRightLeft className="h-4 w-4 text-primary" />
-                      <span className="font-medium">File Transfer</span>
-                    </button>
-                    <button onClick={() => handleDropdownAction("Storage Info")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/90 active:bg-primary/15 transition-colors text-left">
-                      <HardDrive className="h-4 w-4 text-primary" />
-                      <span className="font-medium">Storage Info</span>
-                    </button>
-                    <button onClick={() => handleDropdownAction("Privacy Folder")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/90 active:bg-primary/15 transition-colors text-left">
-                      <Lock className="h-4 w-4 text-primary" />
-                      <span className="font-medium">Privacy Folder</span>
-                    </button>
-                    <button onClick={() => handleDropdownAction("History")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/90 active:bg-primary/15 transition-colors text-left">
-                      <History className="h-4 w-4 text-primary" />
-                      <span className="font-medium">History</span>
-                    </button>
-                    <button onClick={() => handleDropdownAction("MP3 Converter")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/90 active:bg-primary/15 transition-colors text-left">
-                      <Music className="h-4 w-4 text-primary" />
-                      <span className="font-medium">MP3 Converter</span>
-                    </button>
-                    <button onClick={() => handleDropdownAction("Settings")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/90 active:bg-primary/15 transition-colors text-left border-t border-zinc-800 mt-1 pt-2">
-                      <Settings2 className="h-4 w-4 text-primary" />
-                      <span className="font-medium">Settings</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {showSearchInput && (
-              <div className="relative animate-slideDown w-full">
-                <input
-                  type="text"
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  placeholder="Search videos..."
-                  className="w-full bg-zinc-900 text-sm text-white placeholder:text-muted-foreground pl-4 pr-10 py-2 rounded-xl border border-zinc-800 focus:outline-none focus:border-primary/50 transition-all"
-                  autoFocus
-                />
-                {q && (
-                  <button onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white">
-                    <X className="h-4 w-4" />
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between h-10">
+                <Logo />
+                <div className="flex items-center gap-1 relative">
+                  <button
+                    onClick={() => setShowSearchInput(!showSearchInput)}
+                    className={`p-2 rounded-full transition-colors ${showSearchInput ? "bg-primary/20 text-primary" : "text-white/80 active:bg-zinc-800"}`}
+                    aria-label="Toggle search input"
+                  >
+                    <Search className="h-5 w-5" />
                   </button>
-                )}
+
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowMenuDropdown(!showMenuDropdown);
+                    }}
+                    className={`p-2 rounded-full transition-colors ${showMenuDropdown ? "bg-zinc-800 text-primary" : "text-white/80 active:bg-zinc-800"}`}
+                    aria-label="More options"
+                  >
+                    <MoreVertical className="h-5 w-5 font-bold scale-y-110" />
+                  </button>
+
+                  {showMenuDropdown && (
+                    <div className="absolute right-0 top-12 w-52 bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl z-50 py-2 animate-scaleUp backdrop-blur-md">
+                      <button onClick={() => handleDropdownAction("File Transfer")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/90 active:bg-primary/15 transition-colors text-left">
+                        <ArrowRightLeft className="h-4 w-4 text-primary" />
+                        <span className="font-medium">File Transfer</span>
+                      </button>
+                      <button onClick={() => handleDropdownAction("Storage Info")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/90 active:bg-primary/15 transition-colors text-left">
+                        <HardDrive className="h-4 w-4 text-primary" />
+                        <span className="font-medium">Storage Info</span>
+                      </button>
+                      <button onClick={() => handleDropdownAction("Privacy Folder")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/90 active:bg-primary/15 transition-colors text-left">
+                        <Lock className="h-4 w-4 text-primary" />
+                        <span className="font-medium">Privacy Folder</span>
+                      </button>
+                      <button onClick={() => handleDropdownAction("History")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/90 active:bg-primary/15 transition-colors text-left">
+                        <History className="h-4 w-4 text-primary" />
+                        <span className="font-medium">History</span>
+                      </button>
+                      <button onClick={() => handleDropdownAction("MP3 Converter")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/90 active:bg-primary/15 transition-colors text-left">
+                        <Music className="h-4 w-4 text-primary" />
+                        <span className="font-medium">MP3 Converter</span>
+                      </button>
+                      <button onClick={() => handleDropdownAction("Settings")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/90 active:bg-primary/15 transition-colors text-left border-t border-zinc-800 mt-1 pt-2">
+                        <Settings2 className="h-4 w-4 text-primary" />
+                        <span className="font-medium">Settings</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
-            )}
+
+              {showSearchInput && (
+                <div className="relative animate-slideDown w-full">
+                  <input
+                    type="text"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value)}
+                    placeholder="Search videos..."
+                    className="w-full bg-zinc-900 text-sm text-white placeholder:text-muted-foreground pl-4 pr-10 py-2 rounded-xl border border-zinc-800 focus:outline-none focus:border-primary/50 transition-all"
+                    autoFocus
+                  />
+                  {q && (
+                    <button onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-white">
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* --- 🔄 WATCHING HISTORY (STAYS INSIDE STICKY TOP ZONE) --- */}
+        {!selectMode && watchingHistory.length > 0 && !currentFolder && (
+          <div className="mt-1 mb-3 pb-3">
+            <div className="px-4 mb-2.5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-muted-foreground">
+              <History className="h-4 w-4 text-primary" />
+              <span>Watching History</span>
+            </div>
+            <div className="flex gap-3 overflow-x-auto px-4 scrollbar-none snap-x">
+              {watchingHistory.map((item) => (
+                <button
+                  key={`hist-${item.id}`}
+                  onClick={() => {
+                    sessionStorage.setItem("homepage_scroll_pos", window.scrollY.toString());
+                    navigate({ to: "/video/$id", params: { id: item.id } });
+                  }}
+                  className="w-44 flex-shrink-0 text-left snap-start space-y-1.5 group active:opacity-70 transition-opacity"
+                >
+                  <div className="relative h-28 w-44 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
+                    <img src={item.thumb} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
+                    <div className="absolute bottom-0 left-0 w-full h-1 bg-black/40">
+                      <div className="h-full bg-blue-700 transition-all duration-300" style={{ width: `${item.progress}%` }} />
+                    </div>
+                    <div className="absolute inset-x-0 bottom-1.5 px-2 py-0.5 text-right">
+                      <span className="text-[10px] text-white font-medium bg-black/60 px-1.5 py-0.5 rounded">{item.duration}</span>
+                    </div>
+                  </div>
+                  <p className="text-xs font-medium text-white line-clamp-1 group-hover:text-primary transition-colors">{item.title}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* --- TAB SYSTEM DESIGN (STAYS INSIDE STICKY TOP ZONE) --- */}
+        {!selectMode && (
+          <div className="px-4 mb-3">
+            <div className="flex bg-zinc-900 p-1 rounded-xl w-full border border-zinc-800">
+              <button
+                onClick={() => {
+                  setActiveTab("all");
+                  setCurrentFolder(null);
+                }}
+                className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all text-center ${
+                  activeTab === "all"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-white"
+                }`}
+              >
+                All Videos
+              </button>
+              <button
+                onClick={() => setActiveTab("folders")}
+                className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all text-center ${
+                  activeTab === "folders"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-white"
+                }`}
+              >
+                Folders
+              </button>
+            </div>
           </div>
         )}
       </div>
-
-      {/* --- 🔄 WATCHING HISTORY (NOW AT THE TOP AS REQUESTED) --- */}
-      {!selectMode && watchingHistory.length > 0 && !currentFolder && (
-        <div className="mt-1 mb-4 border-b border-zinc-800 pb-4">
-          <div className="px-4 mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-muted-foreground">
-            <History className="h-4 w-4 text-primary" />
-            <span>Watching History</span>
-          </div>
-          <div className="flex gap-3 overflow-x-auto px-4 scrollbar-none snap-x">
-            {watchingHistory.map((item) => (
-              <button
-                key={`hist-${item.id}`}
-                onClick={() => {
-                  sessionStorage.setItem("homepage_scroll_pos", window.scrollY.toString());
-                  navigate({ to: "/video/$id", params: { id: item.id } });
-                }}
-                className="w-44 flex-shrink-0 text-left snap-start space-y-1.5 group active:opacity-70 transition-opacity"
-              >
-                <div className="relative h-28 w-44 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
-                  <img src={item.thumb} alt={item.title} className="h-full w-full object-cover" loading="lazy" />
-                  <div className="absolute bottom-0 left-0 w-full h-1 bg-black/40">
-                    <div className="h-full bg-blue-700 transition-all duration-300" style={{ width: `${item.progress}%` }} />
-                  </div>
-                  <div className="absolute inset-x-0 bottom-1.5 px-2 py-0.5 text-right">
-                    <span className="text-[10px] text-white font-medium bg-black/60 px-1.5 py-0.5 rounded">{item.duration}</span>
-                  </div>
-                </div>
-                <p className="text-xs font-medium text-white line-clamp-1 group-hover:text-primary transition-colors">{item.title}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* --- TAB SYSTEM DESIGN (STICKY ON SCROLL) --- */}
-      {!selectMode && (
-        <div className="px-4 mb-2 sticky top-[77px] z-20 bg-black pb-2">
-          <div className="flex bg-zinc-900 p-1 rounded-xl w-full border border-zinc-800">
-            <button
-              onClick={() => {
-                setActiveTab("all");
-                setCurrentFolder(null);
-              }}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all text-center ${
-                activeTab === "all"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-white"
-              }`}
-            >
-              All Videos
-            </button>
-            <button
-              onClick={() => setActiveTab("folders")}
-              className={`flex-1 py-2 text-xs font-semibold rounded-lg transition-all text-center ${
-                activeTab === "folders"
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-white"
-              }`}
-            >
-              Folders
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* --- MAIN CONTENT DISPLAY AREA --- */}
       {filteredVideos.length === 0 ? (
@@ -816,6 +819,17 @@ function Index() {
               <Lock className="h-5 w-5 mb-1" />
               <span className="text-[10px] font-medium text-white/80">Privacy</span>
             </button>
+
+            {/* 🔥 फ़ाइल ट्रांसफर बटन - बीच में, गोल आकार (Round) और डार्क ब्लू व ग्रीन मिक्स डिज़ाइन में */}
+            <button 
+              onClick={onFileTransfer} 
+              disabled={selected.size === 0} 
+              className="flex flex-col items-center justify-center h-12 w-12 rounded-full bg-gradient-to-tr from-blue-900 to-green-600 text-white disabled:opacity-40 disabled:pointer-events-none active:scale-95 transition-transform mx-2 shadow-lg"
+              title="File Transfer"
+            >
+              <ArrowRightLeft className="h-5 w-5" />
+            </button>
+
             <button onClick={onDelete} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-destructive disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Trash2 className="h-5 w-5 mb-1" />
               <span className="text-[10px] font-medium text-white/80">Delete</span>
@@ -832,40 +846,7 @@ function Index() {
         </div>
       )}
 
-      {/* 🔥 होम पेज पर बॉटम नेविगेशन बार और सीधा किया हुआ फ़ाइल ट्रांसफर बटन */}
-      {!selectMode && (
-        <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-md bg-zinc-950 border-t border-zinc-900 backdrop-blur-md shadow-xl z-50">
-          <div className="relative flex items-center justify-between px-6 h-16">
-            
-            {/* वीडियो बटन (लेफ्ट साइड) */}
-            <button className="flex flex-col items-center justify-center text-primary transition-colors flex-1">
-              <HardDrive className="h-5 w-5 fill-primary/10" />
-              <span className="text-[10px] font-bold mt-1">Videos</span>
-            </button>
-
-            {/* 🔥 फ़ाइल ट्रांसफर बटन - बिल्कुल बीच में, सीधा (Up-Down arrows), थोड़ा बड़ा और आकर्षक */}
-            <div className="absolute left-1/2 bottom-3 -translate-x-1/2 z-50">
-              <button 
-                onClick={onFileTransfer} 
-                className="flex items-center justify-center h-13 w-13 rounded-full bg-gradient-to-tr from-blue-900 to-green-600 text-white active:scale-95 transition-transform shadow-[0_4px_15px_rgba(0,0,0,0.5)] border border-white/10"
-                title="File Transfer"
-              >
-                <div className="flex flex-col items-center justify-center gap-0.5">
-                  <ArrowUp className="h-4 w-4 stroke-[3px]" />
-                  <ArrowDown className="h-4 w-4 stroke-[3px]" />
-                </div>
-              </button>
-            </div>
-
-            {/* म्यूजिक बटन (राइट साइड) */}
-            <button className="flex flex-col items-center justify-center text-muted-foreground hover:text-white transition-colors flex-1">
-              <Music className="h-5 w-5" />
-              <span className="text-[10px] font-medium mt-1">Music</span>
-            </button>
-
-          </div>
-        </div>
-      )}
+      {!selectMode && <BottomTabs />}
     </div>
   );
 }
