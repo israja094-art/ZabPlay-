@@ -49,13 +49,6 @@ jobs:
             bunx cap add android
           fi
 
-      # --- यहाँ आपका नया लोगो और स्प्लैश स्क्रीन जनरेट करने का लॉजिक ऐड किया गया है ---
-      - name: Install Asset Generator Tool
-        run: bun add -d @capacitor/assets
-
-      - name: Generate App Icon and Splash Screen from resources/icon.png
-        run: bunx capacitor-assets generate --android
-
       - name: Capacitor sync
         run: bunx cap sync android
 
