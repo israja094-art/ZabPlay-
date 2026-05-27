@@ -453,7 +453,7 @@ function Index() {
 
   return (
     <div className="min-h-screen bg-black mx-auto max-w-md pb-32 relative">
-      {/* स्क्रीन लॉक और बैकड्रॉप ओवरले */}
+      {/* 2. स्क्रीन लॉक और बैकड्रॉप ओवरले: जब कोई भी मेनू खुला हो तो स्क्रीन लॉक हो जाए और बाहर कहीं भी क्लिक करने पर बंद हो जाए */}
       {isAnyMenuOpen && (
         <div 
           className="fixed inset-0 z-40 bg-transparent cursor-default"
@@ -514,7 +514,7 @@ function Index() {
                   onClick={(e) => {
                     e.stopPropagation();
                     setShowMenuDropdown(!showMenuDropdown);
-                    setActiveCardMenuId(null);
+                    setActiveCardMenuId(null); // टॉप मेनू खुलते ही कार्ड मेनू बंद करें
                   }}
                   className={`p-2 rounded-full transition-colors ${showMenuDropdown ? "bg-zinc-800 text-white" : "text-white/80 active:bg-zinc-900"}`}
                   aria-label="More options"
@@ -525,7 +525,7 @@ function Index() {
                 {showMenuDropdown && (
                   <div className="absolute right-0 top-12 w-52 bg-zinc-950 border border-zinc-800 rounded-2xl shadow-2xl z-50 py-2 animate-scaleUp backdrop-blur-md">
                     <button onClick={() => handleDropdownAction("File Transfer")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/90 active:bg-zinc-900 transition-colors text-left">
-                      <ArrowRightLeft className="h-4 w-4 text-white -rotate-90" />
+                      <ArrowRightLeft className="h-4 w-4 text-white" />
                       <span className="font-medium">File Transfer</span>
                     </button>
                     <button onClick={() => handleDropdownAction("Storage Info")} className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-white/90 active:bg-zinc-900 transition-colors text-left">
@@ -573,7 +573,7 @@ function Index() {
           </div>
         )}
 
-        {/* --- TAB SYSTEM DESIGN --- */}
+        {/* --- TAB SYSTEM DESIGN (BLUE SELECTION ACCENT FIXED) --- */}
         {!selectMode && (
           <div className="flex bg-zinc-900 p-1 rounded-xl w-full border border-zinc-800">
             <button
@@ -615,7 +615,7 @@ function Index() {
               <button
                 key={`hist-${item.id}`}
                 onClick={() => {
-                  if (isAnyMenuOpen) return;
+                  if (isAnyMenuOpen) return; // अगर कोई मेनू खुला है तो क्लिक लॉक रखें
                   sessionStorage.setItem("homepage_scroll_pos", window.scrollY.toString());
                   navigate({ to: "/video/$id", params: { id: item.id } });
                 }}
@@ -646,7 +646,7 @@ function Index() {
         contentLayout
       )}
 
-      {/* --- 🔐 PRIVACY PIN SETUP & UNLOCK ENGINE --- */}
+      {/* --- 🔐 PREMIUM FIXED MODAL: PRIVACY PIN SETUP & UNLOCK ENGINE --- */}
       {showPinModal && (
         <div 
           className="fixed inset-0 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 z-[99999] pointer-events-auto"
@@ -848,33 +848,33 @@ function Index() {
         </div>
       )}
 
-      {/* BOTTOM ACTION BAR PATTI (DARK BLUE COLOR APPLIED TO MATCH THE APP HEAD BRAND) */}
+      {/* BOTTOM ACTION BAR PATTI */}
       {selectMode && (
-        <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-md bg-[#002fff] border-t border-blue-900 backdrop-blur-md shadow-2xl z-50 animate-slideUp">
+        <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-md bg-zinc-950 border-t border-zinc-900 backdrop-blur-md shadow-2xl z-50 animate-slideUp">
           <div className="flex items-center justify-around py-3 px-2">
             <button onClick={onShare} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-white disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Share2 className="h-5 w-5 mb-1" />
-              <span className="text-[10px] font-medium text-white/90">Share</span>
+              <span className="text-[10px] font-medium text-white/80">Share</span>
             </button>
             <button onClick={onPrivacySecure} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-white disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Lock className="h-5 w-5 mb-1" />
-              <span className="text-[10px] font-medium text-white/90">Privacy</span>
+              <span className="text-[10px] font-medium text-white/80">Privacy</span>
             </button>
-            <button onClick={onDelete} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-red-200 disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
-              <Trash2 className="h-5 w-5 mb-1 text-red-200" />
-              <span className="text-[10px] font-medium text-white/90">Delete</span>
+            <button onClick={onDelete} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-red-500 disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
+              <Trash2 className="h-5 w-5 mb-1" />
+              <span className="text-[10px] font-medium text-white/80">Delete</span>
             </button>
             <button onClick={onFileTransfer} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-white disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
-              <ArrowRightLeft className="h-5 w-5 mb-1 -rotate-90" />
-              <span className="text-[10px] font-medium text-white/90">Transfer</span>
+              <ArrowRightLeft className="h-5 w-5 mb-1" />
+              <span className="text-[10px] font-medium text-white/80">Transfer</span>
             </button>
             <button onClick={onVideoCut} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-white disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Scissors className="h-5 w-5 mb-1" />
-              <span className="text-[10px] font-medium text-white/90">Cut Video</span>
+              <span className="text-[10px] font-medium text-white/80">Cut Video</span>
             </button>
             <button onClick={onRename} disabled={selected.size === 0} className="flex flex-col items-center justify-center flex-1 text-white disabled:opacity-40 disabled:pointer-events-none active:scale-90 transition-transform">
               <Edit3 className="h-5 w-5 mb-1" />
-              <span className="text-[10px] font-medium text-white/90">Rename</span>
+              <span className="text-[10px] font-medium text-white/80">Rename</span>
             </button>
           </div>
         </div>
@@ -885,14 +885,14 @@ function Index() {
         <div className="fixed bottom-0 left-0 right-0 mx-auto max-w-md bg-black border-t border-zinc-900 z-50 h-16 flex items-center justify-between px-6">
           <BottomTabs />
           
-          {/* Center Floating Green File Transfer Icon (Icon straightened, made bigger & elevated upwards) */}
-          <div className="absolute left-1/2 bottom-5 -translate-x-1/2 z-50">
+          {/* 20 Center Floating Green File Transfer Icon */}
+          <div className="absolute left-1/2 bottom-3 -translate-x-1/2 z-50">
             <button 
               onClick={() => handleDropdownAction("File Transfer")}
-              className="w-14 h-14 rounded-full bg-green-600 hover:bg-green-500 active:scale-95 text-white flex items-center justify-center shadow-lg shadow-green-900/40 border border-green-500/30 transition-all"
+              className="w-12 h-12 rounded-full bg-green-600 hover:bg-green-500 active:scale-95 text-white flex items-center justify-center shadow-lg shadow-green-900/30 border border-green-500/20 transition-all"
               aria-label="File Transfer"
             >
-              <ArrowRightLeft className="h-6 w-6 stroke-[2.5] -rotate-90" />
+              <ArrowRightLeft className="h-5 w-5 stroke-[2.5]" />
             </button>
           </div>
         </div>
@@ -1005,6 +1005,7 @@ function VideoRow({
             <div 
               onClick={(e) => {
                 e.stopPropagation();
+                // अगर ये मेनू पहले से खुला है तो बंद करो, वरना इसे चालू करो
                 setActiveCardMenuId(showCardMenu ? null : video.id);
               }}
               className="p-1 -mt-1 -mr-1 rounded-full text-white active:bg-zinc-800 cursor-pointer z-50"
@@ -1032,7 +1033,7 @@ function VideoRow({
             onClick={() => handleCardAction("transfer")}
             className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-white active:bg-zinc-900 transition-colors text-left border-t border-zinc-900"
           >
-            <ArrowRightLeft className="h-3.5 w-3.5 text-blue-500 -rotate-90" />
+            <ArrowRightLeft className="h-3.5 w-3.5 text-blue-500" />
             <span className="font-medium">Transfer</span>
           </button>
           <button 
@@ -1047,3 +1048,4 @@ function VideoRow({
     </li>
   );
 }
+
