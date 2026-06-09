@@ -68,6 +68,28 @@ function Index() {
   
   const [watchingHistory, setWatchingHistory] = useState<HistoryItem[]>([]);
 
+  // --- SCROLLING TRACKER FOR WATCHING HISTORY FIXED EFFECT ---
+  const [hideHistory, setHideHistory] = useState(false);
+  const lastScrollY = useRef(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // जब नीचे स्क्रॉल करें तो हिस्ट्री छुपाएं, ऊपर स्क्रॉल करने पर दिखाएं
+      if (currentScrollY > lastScrollY.current && currentScrollY > 50) {
+        setHideHistory(true);
+      } else if (currentScrollY < lastScrollY.current) {
+        setHideHistory(false);
+      }
+      
+      lastScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   // --- POPUPS & DIALOGS REAL STATES ---
   const [showRenameModal, setShowRenameModal] = useState(false);
   const [renameTargetId, setRenameTargetId] = useState<string | null>(null);
@@ -548,9 +570,9 @@ function Index() {
           )}
         </div>
 
-        {/* --- 🔄 WATCHING HISTORY (STAYS INSIDE STICKY TOP ZONE) --- */}
+        {/* --- 🔄 WATCHING HISTORY (ANIMATED COLLAPSE ON SCROLL DOWN) --- */}
         {!selectMode && watchingHistory.length > 0 && !currentFolder && (
-          <div className="mt-1 mb-3 pb-3">
+          <div className={`transition-all duration-300 ease-in-out overflow-hidden ${hideHistory ? "max-h-0 opacity-0 pointer-events-none mb-0 pb-0 mt-0" : "max-h-48 opacity-100 mt-1 mb-3 pb-3"}`}>
             <div className="px-4 mb-2.5 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-muted-foreground">
               <History className="h-4 w-4 text-primary" />
               <span>Watching History</span>
